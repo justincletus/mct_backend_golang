@@ -1,31 +1,25 @@
 # syntax=docker/dockerfile:1
 
-## Build
-FROM golang:1.16-buster AS build
-
+# Build
+FROM golang:alpine3.17 AS build
 WORKDIR /app
 
-COPY go.mod ./
-COPY go.sum ./
+COPY go.mod .
+COPY go.sum .
 RUN go mod download
-
-COPY *.go ./
-
+COPY . .
 # Build development version
 ENV BUILD_PLATFORMS -osarch=linux/amd64
 
-
 RUN go build -o /gps-tracking
 
-## Deploy
-FROM gcr.io/distroless/base-debian10
+# Deploy
+FROM alpine:latest
+WORKDIR /app
 
-WORKDIR /
+EXPOSE 8000
 
-COPY --from=build /gps-tracking /gps-tracking
+COPY local.json .
+COPY --from=build /gps-tracking .
 
-EXPOSE 8080
-
-USER nonroot:nonroot
-
-ENTRYPOINT ["/gps-tracking"]
+ENTRYPOINT ["/app/gps-tracking"]
