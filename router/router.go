@@ -7,4 +7,5 @@ import (
 
 func Setup(app *fiber.App) {
 	app.Get("/", handler.GetUsers)
+	app.Post("/", handler.SaveLocation)
 }
