@@ -1,6 +1,6 @@
 package main
 
-import "github.com/justincletus/gpstrack/app"
+import "github.com/justincletus/map-backend/app"
 
 func main() {
 	app.Start()

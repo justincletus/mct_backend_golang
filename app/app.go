@@ -4,7 +4,7 @@ import (
 	"log"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/justincletus/gpstrack/router"
+	"github.com/justincletus/map-backend/router"
 )
 
 func Start() {
