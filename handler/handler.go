@@ -1,6 +1,10 @@
 package handler
 
 import (
+	"encoding/json"
+	"fmt"
+	"strconv"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/justincletus/map-backend/database"
 	"github.com/justincletus/map-backend/models"
@@ -34,23 +38,43 @@ func GetLocationById(c *fiber.Ctx) error {
 
 func SaveLocation(ctx *fiber.Ctx) error {
 	var data map[string]string
+	var location models.Location
+	var body string
 
 	ctx.BodyParser(&data)
 
-	var location models.Location
-	location.Latitude = data["latitude"]
-	location.Longitude = data["longtude"]
-	err := database.DB.Create(&location).Error
-	if err != nil {
+	body = data["body"]
+	if body != "" {
+		tempNew := make(map[string]interface{})
+		json.Unmarshal([]byte(body), &tempNew)
+		location.Latitude = strconv.FormatFloat(tempNew["latitude"].(float64), 'f', 2, 64)
+		location.Longitude = strconv.FormatFloat(tempNew["longitude"].(float64), 'f', 2, 64)
+
+	} else {
+		fmt.Println("no body field")
+		location.Latitude = data["latitude"]
+		location.Longitude = data["longitude"]
+
+	}
+
+	if location.Latitude != "" && location.Longitude != "" {
+		err := database.DB.Create(&location).Error
+		if err != nil {
+			return ctx.JSON(fiber.Map{
+				"status":  fiber.StatusBadRequest,
+				"message": "location information not saved",
+			})
+		}
+
 		return ctx.JSON(fiber.Map{
-			"status":  fiber.StatusBadRequest,
-			"message": "location information not saved",
+			"message": "user location saved",
+			"status":  fiber.StatusCreated,
 		})
 	}
 
-	return ctx.JSON(fiber.Map{
-		"message": "user location saved",
-		"status":  fiber.StatusCreated,
+	return ctx.Status(400).JSON(fiber.Map{
+		"message": "latitude or longitude details should be exmpty",
+		"data":    data,
 	})
 
 }

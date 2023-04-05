@@ -11,6 +11,8 @@ COPY . .
 # Build development version
 ENV BUILD_PLATFORMS -osarch=linux/amd64
 
+EXPOSE 8000
+
 RUN go build -o /gps-tracking
 
 # Deploy

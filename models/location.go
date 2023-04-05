@@ -6,6 +6,6 @@ type Location struct {
 	gorm.Model
 
 	Id        uint   `db:"id" json:"id"`
-	Latitude  string `db:"latitude" json:"lat"`
-	Longitude string `db:"longtude" json:"lng"`
+	Latitude  string `db:"latitude" json:"latitude"`
+	Longitude string `db:"longitude" json:"longitude"`
 }
