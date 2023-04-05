@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 )
 
 var SECRET string
@@ -12,10 +13,25 @@ func Config() (string, error) {
 
 	var data map[string]string
 	var datasource string
+	var dataByte []byte
 
-	dataByte, err := ioutil.ReadFile("local.json")
+	host, err := os.Hostname()
 	if err != nil {
-		return "", fmt.Errorf(err.Error())
+		return "", fmt.Errorf("Host name not found")
+	}
+
+	if host == "vijin" {
+		dataByte, err = ioutil.ReadFile("localDev.json")
+		if err != nil {
+			return "", fmt.Errorf(err.Error())
+		}
+
+	} else {
+		dataByte, err = ioutil.ReadFile("local.json")
+		if err != nil {
+			return "", fmt.Errorf(err.Error())
+		}
+
 	}
 
 	if err = json.Unmarshal(dataByte, &data); err != nil {

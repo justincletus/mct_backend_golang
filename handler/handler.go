@@ -6,13 +6,30 @@ import (
 	"github.com/justincletus/map-backend/models"
 )
 
-func GetUsers(ctx *fiber.Ctx) error {
+func GetLocations(ctx *fiber.Ctx) error {
+
+	var location []models.Location
+	_ = database.DB.Select("id", "latitude", "longitude").Find(&location)
 
 	return ctx.JSON(fiber.Map{
-		"message": "hello world!",
-		"status":  fiber.StatusOK,
+		"data": location,
 	})
 
+}
+
+func GetLocationById(c *fiber.Ctx) error {
+	lid := c.Params("id")
+	var location models.Location
+	database.DB.Where("id", lid).First(&location)
+	if location.Id == 0 {
+		return c.Status(404).JSON(fiber.Map{
+			"message": "location not found",
+		})
+	}
+
+	return c.JSON(fiber.Map{
+		"data": location,
+	})
 }
 
 func SaveLocation(ctx *fiber.Ctx) error {
@@ -22,7 +39,7 @@ func SaveLocation(ctx *fiber.Ctx) error {
 
 	var location models.Location
 	location.Latitude = data["latitude"]
-	location.Longtude = data["longtude"]
+	location.Longitude = data["longtude"]
 	err := database.DB.Create(&location).Error
 	if err != nil {
 		return ctx.JSON(fiber.Map{

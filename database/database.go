@@ -23,6 +23,7 @@ func Connetion() error {
 
 	DB = connection
 	DB.AutoMigrate(&models.Location{})
+	DB.AutoMigrate(&models.User{})
 
 	return nil
 
