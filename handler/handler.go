@@ -2,13 +2,16 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"strconv"
+	"strings"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
 	"github.com/justincletus/map-backend/database"
 	"github.com/justincletus/map-backend/models"
 )
+
+//var SECRET = config.SECRET
 
 func GetLocations(ctx *fiber.Ctx) error {
 
@@ -37,6 +40,10 @@ func GetLocationById(c *fiber.Ctx) error {
 }
 
 func SaveLocation(ctx *fiber.Ctx) error {
+	// userData := GetUser(ctx)
+	// //fmt.Println(userData)
+
+	//if userData != nil {
 	var data map[string]string
 	var location models.Location
 	var body string
@@ -49,9 +56,23 @@ func SaveLocation(ctx *fiber.Ctx) error {
 		json.Unmarshal([]byte(body), &tempNew)
 		location.Latitude = strconv.FormatFloat(tempNew["latitude"].(float64), 'f', 2, 64)
 		location.Longitude = strconv.FormatFloat(tempNew["longitude"].(float64), 'f', 2, 64)
+		address := tempNew["address"].(string)
+		if address != "" {
+			addressArr := strings.Split(address, ",")
+			if addressArr[len(addressArr)-1] != "" {
+				location.Country = addressArr[len(addressArr)-1]
+			}
+			if addressArr[len(addressArr)-2] != "" {
+				stateArr := strings.Split(addressArr[len(addressArr)-2], " ")
+				location.State = stateArr[1]
+				location.PinCode = stateArr[2]
+			}
+
+			location.City = addressArr[len(addressArr)-4]
+		}
 
 	} else {
-		fmt.Println("no body field")
+		//fmt.Println("no body field")
 		location.Latitude = data["latitude"]
 		location.Longitude = data["longitude"]
 
@@ -77,4 +98,34 @@ func SaveLocation(ctx *fiber.Ctx) error {
 		"data":    data,
 	})
 
+	//}
+
+	// return ctx.Status(404).JSON(fiber.Map{
+	// 	"message": "user is not authorized, please login again",
+	// })
+
+}
+
+func GetUser(c *fiber.Ctx) error {
+	cookie := c.Cookies("jwt")
+	if cookie != "" {
+		token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(t *jwt.Token) (interface{}, error) {
+			return []byte(SECRET), nil
+		})
+		if err != nil {
+			c.Status(401).JSON(fiber.Map{
+				"message": "you are not authorized to perform this task",
+			})
+		}
+
+		claims := token.Claims.(*jwt.StandardClaims)
+		var user models.User
+		database.DB.Where("id=?", claims.Issuer).First(&user)
+		return c.Status(200).JSON(fiber.Map{
+			"id":       user.ID,
+			"username": user.Fullname,
+		})
+	}
+
+	return c.Status(404).JSON(fiber.Map{})
 }
