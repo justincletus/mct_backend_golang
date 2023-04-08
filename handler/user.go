@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 
@@ -101,6 +102,8 @@ func Logout(c *fiber.Ctx) error {
 	}
 
 	c.Cookie(&cookie)
+
+	fmt.Println(cookie)
 
 	return c.Status(200).JSON(fiber.Map{
 		"message": "logout suuccess!",
