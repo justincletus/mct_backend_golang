@@ -16,4 +16,5 @@ func Setup(app *fiber.App) {
 	api.Post("/logout", handler.Logout)
 	api.Get("/user", handler.GetUser)
 	api.Get("/location/:id", handler.GetLocationById)
+	api.Get("/locations/:username", handler.GetLocationByUsername)
 }

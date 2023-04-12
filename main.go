@@ -1,6 +1,10 @@
 package main
 
-import "github.com/justincletus/map-backend/app"
+import (
+	_ "github.com/justincletus/map-backend/tz"
+
+	"github.com/justincletus/map-backend/app"
+)
 
 func main() {
 	app.Start()
