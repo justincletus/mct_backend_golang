@@ -42,6 +42,11 @@ func Register(c *fiber.Ctx) error {
 	user.Mobile = data["mobile"]
 	user.Password = passwordBytes
 	user.Username = getUsername(data["fullname"])
+	if data["role"] == "" {
+		data["role"] = "user"
+	}
+
+	user.Role = data["role"]
 
 	uId := database.DB.Create(&user)
 	rowId := uId.RowsAffected
@@ -125,6 +130,7 @@ func Login(c *fiber.Ctx) error {
 		"message":  "login successful!",
 		"username": user.Username,
 		"id":       user.Id,
+		"role":     user.Role,
 	})
 }
 

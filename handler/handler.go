@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -126,4 +127,67 @@ func SaveLocation(ctx *fiber.Ctx) error {
 	// 	"message": "user is not authorized to perform this task",
 	// })
 
+}
+
+func SaveFeedBack(c *fiber.Ctx) error {
+	var data map[string]string
+	var feedback models.FeedBack
+
+	c.BodyParser(&data)
+	fmt.Println(data)
+
+	var user models.User
+
+	database.DB.Where("username", data["username"]).First(&user)
+	if user.Id == 0 {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "user not found",
+		})
+	}
+	//return nil
+
+	feedback.Title = data["title"]
+	feedback.Description = data["description"]
+	feedback.Username = data["username"]
+	feedback.Uid = user.Id
+	feedback.Address = data["address"]
+	feedback.User = user
+
+	transId := database.DB.Create(&feedback)
+	if transId.RowsAffected == 0 {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "failed saving feedback form",
+		})
+	}
+
+	return c.Status(201).JSON(fiber.Map{
+		"data": feedback,
+	})
+}
+
+func GetFeedback(c *fiber.Ctx) error {
+	role := c.GetReqHeaders()
+
+	var feedback []models.FeedBack
+	var user models.User
+
+	header, ok := role["Role"]
+	if ok {
+		database.DB.Where("role", header).First(&user)
+		if user.Id == 0 {
+			return c.Status(404).JSON(fiber.Map{
+				"message": "user not found",
+			})
+		}
+	} else {
+		return c.Status(404).JSON(fiber.Map{
+			"message": "user role not found",
+		})
+	}
+
+	database.DB.Preload("Feedback").Order("created_at desc").Find(&feedback)
+
+	return c.Status(200).JSON(fiber.Map{
+		"data": feedback,
+	})
 }

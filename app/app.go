@@ -18,7 +18,7 @@ func Start() {
 
 	project.Use(cors.New(cors.Config{
 		AllowOrigins:     "http://localhost:3000, http://127.0.0.1:3000, https://tracking.cccabs-service.in",
-		AllowHeaders:     "Origin, Content-Type, Accept",
+		AllowHeaders:     "Origin, Content-Type, Accept, role",
 		AllowCredentials: true,
 	}))
 

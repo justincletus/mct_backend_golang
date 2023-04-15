@@ -13,5 +13,6 @@ type User struct {
 	Fullname string `db:"fullname" json:"fullname"`
 	Mobile   string `db:"mobile" json:"mobile"`
 	Password []byte `db:"password" json:"-"`
+	Role     string `db:"role" json:"role" gorm:"default;null"`
 	//Location *Location `json:",omitempty" gorm:"foreignKey:Location"`
 }
