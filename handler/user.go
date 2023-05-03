@@ -62,7 +62,7 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	return c.Status(201).JSON(fiber.Map{
-		"response": user,
+		"data": user,
 	})
 
 }
