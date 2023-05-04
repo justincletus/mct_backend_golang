@@ -1,8 +1,11 @@
 package handler
 
 import (
+	"bytes"
+	"crypto/tls"
 	"errors"
 	"fmt"
+	"html/template"
 	"strconv"
 	"strings"
 	"time"
@@ -12,11 +15,19 @@ import (
 	"github.com/justincletus/map-backend/config"
 	"github.com/justincletus/map-backend/database"
 	"github.com/justincletus/map-backend/models"
+	"github.com/k3a/html2text"
 	"golang.org/x/crypto/bcrypt"
+	gomail "gopkg.in/mail.v2"
 	"gorm.io/gorm"
 )
 
 var SECRET = config.SECRET
+
+var temp *template.Template
+
+func init() {
+	temp = template.Must(template.ParseGlob("templates/*.html"))
+}
 
 func Register(c *fiber.Ctx) error {
 	var data map[string]string
@@ -29,6 +40,19 @@ func Register(c *fiber.Ctx) error {
 			"message": "user registration failed",
 		})
 	}
+
+	// fmt.Println(data["email"])
+
+	// err = sendEmail(data["email"])
+	// if err != nil {
+	// 	return c.Status(400).JSON(fiber.Map{
+	// 		"message": "sending email is failed",
+	// 	})
+	// }
+
+	// return c.Status(200).JSON(fiber.Map{
+	// 	"message": "email is send successfully",
+	// })
 
 	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(data["password"]), 14)
 	if err != nil {
@@ -179,4 +203,44 @@ func GetUser(c *fiber.Ctx) error {
 	return c.Status(400).JSON(fiber.Map{
 		"message": "not received access token",
 	})
+}
+
+func sendEmail(email string) error {
+	from := "info@cccabs-service.in"
+	password := "#03Jgabi"
+
+	smtpHost := "smtp.hostinger.com"
+	smtpPort := 587
+
+	var body bytes.Buffer
+
+	data := struct {
+		Name    string
+		Message string
+	}{
+		Name:    "Hello",
+		Message: "World",
+	}
+
+	if err := temp.ExecuteTemplate(&body, "template.html", &data); err != nil {
+		fmt.Println(err)
+		return err
+	}
+
+	// return nil
+	m := gomail.NewMessage()
+	m.SetHeader("From", from)
+	m.SetHeader("To", email)
+	m.SetHeader("Subject", "Demo email")
+	m.SetBody("text/html", body.String())
+	m.AddAlternative("text/plain", html2text.HTML2Text(body.String()))
+	d := gomail.NewDialer(smtpHost, smtpPort, from, password)
+	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+
+	if err := d.DialAndSend(m); err != nil {
+		return err
+	}
+
+	return nil
+
 }
