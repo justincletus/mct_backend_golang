@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/justincletus/map-backend/database"
-	"github.com/justincletus/map-backend/models"
+	"github.com/justincletus/cms/database"
+	"github.com/justincletus/cms/models"
 )
 
 //var SECRET = config.SECRET

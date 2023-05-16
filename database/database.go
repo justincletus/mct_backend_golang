@@ -1,8 +1,8 @@
 package database
 
 import (
-	"github.com/justincletus/map-backend/config"
-	"github.com/justincletus/map-backend/models"
+	"github.com/justincletus/cms/config"
+	"github.com/justincletus/cms/models"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )

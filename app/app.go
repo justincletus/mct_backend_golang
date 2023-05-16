@@ -6,8 +6,8 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/justincletus/map-backend/database"
-	"github.com/justincletus/map-backend/router"
+	"github.com/justincletus/cms/database"
+	"github.com/justincletus/cms/router"
 )
 
 func Start() {

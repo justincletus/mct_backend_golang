@@ -3,7 +3,7 @@ package router
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/justincletus/map-backend/handler"
+	"github.com/justincletus/cms/handler"
 )
 
 func Setup(app *fiber.App) {

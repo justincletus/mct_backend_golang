@@ -3,7 +3,7 @@ package middelware
 import (
 	"github.com/gofiber/fiber/v2"
 	jwtware "github.com/gofiber/jwt/v2"
-	"github.com/justincletus/map-backend/config"
+	"github.com/justincletus/cms/config"
 )
 
 var SECRET = config.SECRET

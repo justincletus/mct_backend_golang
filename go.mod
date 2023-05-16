@@ -1,4 +1,4 @@
-module github.com/justincletus/map-backend
+module github.com/justincletus/cms
 
 go 1.19
 

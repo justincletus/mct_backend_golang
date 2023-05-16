@@ -12,9 +12,9 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
-	"github.com/justincletus/map-backend/config"
-	"github.com/justincletus/map-backend/database"
-	"github.com/justincletus/map-backend/models"
+	"github.com/justincletus/cms/config"
+	"github.com/justincletus/cms/database"
+	"github.com/justincletus/cms/models"
 	"github.com/k3a/html2text"
 	"golang.org/x/crypto/bcrypt"
 	gomail "gopkg.in/mail.v2"
