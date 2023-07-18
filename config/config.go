@@ -8,44 +8,32 @@ import (
 
 var SECRET string
 
-func Config() (string, error) {
+func Config() (map[string]string, error) {
 
 	var data map[string]string
-	var datasource string
+	//var datasource string
 	var dataByte []byte
-
-	// host, err := os.Hostname()
-	// if err != nil {
-	// 	return "", fmt.Errorf("Host name not found")
-	// }
 
 	dataByte, err := ioutil.ReadFile("local.json")
 	if err != nil {
-		return "", fmt.Errorf(err.Error())
+		return nil, fmt.Errorf(err.Error())
 	}
 
-	// if host == "vijin" {
-	// 	dataByte, err = ioutil.ReadFile("localDev.json")
-	// 	if err != nil {
-	// 		return "", fmt.Errorf(err.Error())
-	// 	}
-
-	// } else {
-	// 	dataByte, err = ioutil.ReadFile("local.json")
-	// 	if err != nil {
-	// 		return "", fmt.Errorf(err.Error())
-	// 	}
-
-	// }
-
 	if err = json.Unmarshal(dataByte, &data); err != nil {
-		return "", fmt.Errorf(err.Error())
+		return nil, fmt.Errorf(err.Error())
 	}
 
 	SECRET = data["app_secret"]
 
-	datasource = fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", data["username"], data["password"], data["host"], data["port"], data["database"])
+	return data, nil
 
-	return datasource, nil
+}
 
+func GetAppSecret() string {
+	_, err := Config()
+	if err != nil {
+		return ""
+	}
+
+	return SECRET
 }

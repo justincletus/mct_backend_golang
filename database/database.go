@@ -1,8 +1,9 @@
 package database
 
 import (
+	"fmt"
+
 	"github.com/justincletus/cms/config"
-	"github.com/justincletus/cms/models"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
@@ -10,10 +11,12 @@ import (
 var DB *gorm.DB
 
 func Connetion() error {
-	dataSource, err := config.Config()
+	data, err := config.Config()
 	if err != nil {
 		return err
 	}
+
+	dataSource := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", data["username"], data["password"], data["host"], data["port"], data["database"])
 
 	dataSource += "?charset=utf8mb4&parseTime=True&loc=Local"
 	connection, err := gorm.Open(mysql.Open(dataSource), &gorm.Config{})
@@ -22,9 +25,10 @@ func Connetion() error {
 	}
 
 	DB = connection
-	DB.AutoMigrate(&models.Location{})
-	DB.AutoMigrate(&models.User{})
-	DB.AutoMigrate(&models.FeedBack{})
+	// DB.AutoMigrate(&models.Report{})
+	// DB.AutoMigrate(&models.User{})
+	// DB.AutoMigrate(&models.Manager{})
+	// DB.AutoMigrate(&models.TeamMem{})
 
 	return nil
 

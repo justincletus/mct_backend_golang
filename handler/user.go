@@ -1,11 +1,8 @@
 package handler
 
 import (
-	"bytes"
-	"crypto/tls"
 	"errors"
 	"fmt"
-	"html/template"
 	"strconv"
 	"strings"
 	"time"
@@ -15,44 +12,26 @@ import (
 	"github.com/justincletus/cms/config"
 	"github.com/justincletus/cms/database"
 	"github.com/justincletus/cms/models"
-	"github.com/k3a/html2text"
+	"github.com/justincletus/cms/utils"
 	"golang.org/x/crypto/bcrypt"
-	gomail "gopkg.in/mail.v2"
 	"gorm.io/gorm"
 )
 
 var SECRET = config.SECRET
 
-var temp *template.Template
-
-func init() {
-	temp = template.Must(template.ParseGlob("templates/*.html"))
-}
-
 func Register(c *fiber.Ctx) error {
 	var data map[string]string
 
 	var user models.User
+	var manager models.Manager
 
 	err := c.BodyParser(&data)
 	if err != nil {
+		fmt.Println(err)
 		return c.Status(400).JSON(fiber.Map{
 			"message": "user registration failed",
 		})
 	}
-
-	// fmt.Println(data["email"])
-
-	// err = sendEmail(data["email"])
-	// if err != nil {
-	// 	return c.Status(400).JSON(fiber.Map{
-	// 		"message": "sending email is failed",
-	// 	})
-	// }
-
-	// return c.Status(200).JSON(fiber.Map{
-	// 	"message": "email is send successfully",
-	// })
 
 	passwordBytes, err := bcrypt.GenerateFromPassword([]byte(data["password"]), 14)
 	if err != nil {
@@ -71,6 +50,13 @@ func Register(c *fiber.Ctx) error {
 	}
 
 	user.Role = data["role"]
+	user.Code = utils.CreateUuid()
+
+	if data["email_verified"] == "true" {
+		user.EmailVerified = true
+	} else {
+		user.EmailVerified = false
+	}
 
 	uId := database.DB.Create(&user)
 	rowId := uId.RowsAffected
@@ -85,9 +71,45 @@ func Register(c *fiber.Ctx) error {
 		}
 	}
 
-	return c.Status(201).JSON(fiber.Map{
-		"data": user,
-	})
+	if data["role"] == "manager" {
+		manager.UserId = user.Id
+	}
+
+	if manager.UserId != 0 {
+		database.DB.Create(&manager)
+	}
+
+	if user.EmailVerified {
+		emailStruct := utils.EmailBody{
+			Email:    user.Email,
+			Password: data["password"],
+		}
+		err = emailStruct.SendEmail(user.Email, "Account Created", "account.html")
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		return c.Status(201).JSON(fiber.Map{
+			"data": data,
+		})
+	} else {
+
+		host := utils.GetRemoteHostAddress(c)
+
+		e_mail_struct := utils.EmailBody{
+			Code: user.Code,
+			Url:  host,
+		}
+		err = e_mail_struct.SendEmail(user.Email, "Account Confirmation", "email_verification.html")
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		return c.Status(201).JSON(fiber.Map{
+			"data": user,
+		})
+
+	}
 
 }
 
@@ -121,6 +143,12 @@ func Login(c *fiber.Ctx) error {
 		})
 	}
 
+	if !(user.EmailVerified) {
+		return c.Status(400).JSON(fiber.Map{
+			"message": "user email id is not verified",
+		})
+	}
+
 	err = bcrypt.CompareHashAndPassword(user.Password, []byte(data["password"]))
 
 	if err != nil {
@@ -130,11 +158,12 @@ func Login(c *fiber.Ctx) error {
 	}
 
 	claims := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.StandardClaims{
-		Issuer:    strconv.Itoa(int(user.ID)),
+		Issuer:    strconv.Itoa(int(user.Id)),
 		ExpiresAt: time.Now().Add(time.Hour * 24).Unix(),
 	})
 
-	token, err := claims.SignedString([]byte(SECRET))
+	appSec := config.GetAppSecret()
+	token, err := claims.SignedString([]byte(appSec))
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{
 			"message": "unable decrypt the password, please check the password again",
@@ -174,14 +203,14 @@ func Logout(c *fiber.Ctx) error {
 }
 
 func GetUser(c *fiber.Ctx) error {
-
 	cookie := c.Cookies("jwt")
+	appSec := config.GetAppSecret()
 
 	if cookie != "" {
 		token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(t *jwt.Token) (interface{}, error) {
-			return []byte(SECRET), nil
+			return []byte(appSec), nil
 		})
-		fmt.Printf("%v", err)
+		//fmt.Printf("%v", err)
 		if err != nil {
 			return c.Status(401).JSON(fiber.Map{
 				"message": "you are not authorized to perform this task",
@@ -191,56 +220,87 @@ func GetUser(c *fiber.Ctx) error {
 		claims := token.Claims.(*jwt.StandardClaims)
 		var user models.User
 
-		fmt.Println(claims.Issuer)
-
 		database.DB.Where("id=?", claims.Issuer).First(&user)
+
 		return c.Status(200).JSON(fiber.Map{
-			"id":       user.ID,
-			"fullname": user.Fullname,
+			"id":             user.Id,
+			"fullname":       user.Username,
+			"role":           user.Role,
+			"email":          user.Email,
+			"mobile":         user.Mobile,
+			"email_verified": user.EmailVerified,
 		})
 	}
 
 	return c.Status(400).JSON(fiber.Map{
+		"data":    "",
 		"message": "not received access token",
 	})
 }
 
-func sendEmail(email string) error {
-	from := "info@cccabs-service.in"
-	password := "#03Jgabi"
+func EmailVerify(c *fiber.Ctx) error {
+	code := c.Params("code")
 
-	smtpHost := "smtp.hostinger.com"
-	smtpPort := 587
+	var user models.User
 
-	var body bytes.Buffer
-
-	data := struct {
-		Name    string
-		Message string
-	}{
-		Name:    "Hello",
-		Message: "World",
+	database.DB.Where("code", code).First(&user)
+	if user.Id != 0 {
+		user.EmailVerified = true
+		database.DB.Save(&user)
+		if database.DB.Error != nil {
+			return c.Status(400).JSON(fiber.Map{
+				"message": "email is verification failed",
+			})
+		} else {
+			return c.Status(200).JSON(fiber.Map{
+				"message": "email is verified",
+			})
+		}
+	} else {
+		return c.Status(404).JSON(fiber.Map{
+			"message": "user is not found",
+		})
 	}
 
-	if err := temp.ExecuteTemplate(&body, "template.html", &data); err != nil {
-		fmt.Println(err)
-		return err
+}
+
+func GetAllUsers(c *fiber.Ctx) error {
+
+	_, err := ValidateUser(c)
+
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{
+			"message": err.Error(),
+		})
 	}
 
-	// return nil
-	m := gomail.NewMessage()
-	m.SetHeader("From", from)
-	m.SetHeader("To", email)
-	m.SetHeader("Subject", "Demo email")
-	m.SetBody("text/html", body.String())
-	m.AddAlternative("text/plain", html2text.HTML2Text(body.String()))
-	d := gomail.NewDialer(smtpHost, smtpPort, from, password)
-	d.TLSConfig = &tls.Config{InsecureSkipVerify: true}
+	var user []models.User
+	database.DB.Order("created_at desc").Find(&user)
 
-	if err := d.DialAndSend(m); err != nil {
-		return err
+	return c.Status(200).JSON(fiber.Map{
+		"data": user,
+	})
+}
+
+func ValidateUser(c *fiber.Ctx) (int, error) {
+	cookie := c.Cookies("jwt")
+	appSecret := config.GetAppSecret()
+	if cookie != "" {
+		token, err := jwt.ParseWithClaims(cookie, &jwt.StandardClaims{}, func(t *jwt.Token) (interface{}, error) {
+			return []byte(appSecret), nil
+		})
+		fmt.Printf("%v", err)
+		if err != nil {
+			return 0, fmt.Errorf("you are not authorized %v", err)
+		}
+
+		claims := token.Claims.(*jwt.StandardClaims)
+
+		var user models.User
+		database.DB.Where("id=?", claims.Issuer).First(&user)
+
+		return int(user.Id), nil
 	}
 
-	return nil
-
+	return 0, fmt.Errorf("user is not authorized")
 }
