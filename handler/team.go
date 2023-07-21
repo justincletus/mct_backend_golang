@@ -8,11 +8,8 @@ import (
 
 func CreateTeam(c *fiber.Ctx) error {
 	data := make(map[string]string)
-
 	err := c.BodyParser(&data)
-	//fmt.Println(data)
 	if err != nil {
-		//fmt.Println(err)
 		return c.Status(400).JSON(fiber.Map{
 			"message": "bad request please check the payload",
 		})
@@ -20,24 +17,27 @@ func CreateTeam(c *fiber.Ctx) error {
 
 	var user models.User
 
-	database.DB.Where("email=?", data["manager"]).Where("role=?", "manager").Find(&user)
+	database.DB.Where("role=?", data["role"]).First(&user)
 	if user.Id == 0 {
 		return c.Status(404).JSON(fiber.Map{
-			"message": "manager user email is not matched",
+			"message": "user account not found",
 		})
 	}
 
 	team := models.TeamMem{
-		Title:   data["title"],
-		UserId:  user.Id,
-		User:    user,
-		Members: data["t_user"],
+		Title:           data["title"],
+		SubContractor:   data["sub_contractor"],
+		ContractorEmail: data["contractor_email"],
+		ClientEmail:     data["client_email"],
+		Members:         data["members"],
+		UserId:          user.Id,
+		User:            user,
 	}
 
 	database.DB.Create(&team)
 
 	return c.Status(201).JSON(fiber.Map{
-		"message": "team is created",
+		"message": team,
 	})
 
 }

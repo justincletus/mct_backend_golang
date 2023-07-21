@@ -103,7 +103,14 @@ func DeleteUser(c *fiber.Ctx) error {
 			"message": "user not found",
 		})
 	}
-	database.DB.Unscoped().Delete(&user, id)
+
+	if user.Role != "admin" {
+		database.DB.Unscoped().Delete(&user, id)
+	} else {
+		return c.Status(401).JSON(fiber.Map{
+			"message": "deleting admin user account is restricted!",
+		})
+	}
 
 	return c.Status(200).JSON(fiber.Map{
 		"message": "user is deleted",

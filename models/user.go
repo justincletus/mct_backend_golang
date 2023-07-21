@@ -1,37 +1,29 @@
 package models
 
-import (
-	"gorm.io/gorm"
-)
-
 type User struct {
-	gorm.Model
-
-	Id            uint    `db:"id" json:"id" gorm:"primaryKey;autoIncrement:true"`
-	Email         string  `db:"email" json:"email" binding:"required email" gorm:"unique; not null"`
-	Username      string  `db:"username" json:"username" gorm:"unique"`
-	Fullname      string  `db:"fullname" json:"fullname"`
-	Mobile        string  `db:"mobile" json:"mobile"`
-	Password      []byte  `db:"password" json:"-"`
-	Role          string  `db:"role" json:"role" gorm:"default:null"`
-	Code          string  `db:"code" json:"code" gorm:"default:null"`
-	EmailVerified bool    `db:"email_verified" json:"email_verified" gorm:"default:false"`
-	Manager       Manager `gorm:"default:null; constraint:OnDelete:CASCADE"`
-	TeamMems      []TeamMem
+	Id            int    `db:"id" json:"id"`
+	Email         string `db:"email" json:"email"`
+	Username      string `db:"username" json:"username"`
+	Fullname      string `db:"fullname" json:"fullname"`
+	Mobile        string `db:"mobile" json:"mobile"`
+	Password      []byte `db:"password" json:"-"`
+	Role          string `db:"role" json:"role"`
+	Code          string `db:"code" json:"code"`
+	EmailVerified bool   `db:"email_verified" json:"email_verified"`
 }
 
 type Manager struct {
-	gorm.Model
-
-	Id     uint `db:"id" json:"id" gorm:"primaryKey; autoIncrement:true"`
-	UserId uint
+	Id     int `db:"id" json:"id" gorm:"primaryKey; autoIncrement:true"`
+	UserId int
 }
 
 type TeamMem struct {
-	gorm.Model
-	Id      uint   `db:"id" json:"id" gorm:"primaryKey; autoIncrement:true"`
-	Title   string `db:"title" json:"title"`
-	UserId  uint   `json:"user_id" gorm:"foreignKey:UserId"`
-	User    User   `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;"`
-	Members string `db:"members" json:"members"`
+	Id              int    `db:"id" json:"id"`
+	Title           string `db:"title" json:"title"`
+	SubContractor   string `db:"sub_contractor" json:"sub_contractor"`
+	ContractorEmail string `db:"contractor_email;omitempty" json:"contractor_email"`
+	ClientEmail     string `db:"client_email;omitempty" json:"client_email"`
+	Members         string `db:"members;omitempty" json:"members"`
+	UserId          int    `json:"user_id"`
+	User            User
 }

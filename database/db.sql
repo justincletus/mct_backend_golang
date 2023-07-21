@@ -17,6 +17,8 @@ create table if not exists `users`(
   primary key(`id`)
   ) engine=innodb auto_increment=1000 default charset=latin1;
 
+alter table `users` MODIFY column role VARCHAR(20) default "user";
+
 CREATE TABLE IF NOT EXISTS `projects` (
     `id` INT(10) NOT NULL AUTO_INCREMENT,
     `project_id` VARCHAR(10) UNIQUE,
@@ -40,6 +42,17 @@ CREATE TABLE IF NOT EXISTS `orders`(
   key `ord_key` (`user_id`),
   constraint `ord_key` foreign key(`user_id`) references `users`(`id`) on delete cascade
 ) engine=innodb auto_increment=1000 default charset=latin1;
+
+alter table `orders` MODIFY COLUMN `requisition_no` varchar(30);
+alter table `orders` MODIFY column `purchase_order_no` VARCHAR(30);
+alter table `orders` MODIFY COLUMN `delivery_note_no` VARCHAR(30);
+alter table `orders` drop foreign key `ord_key`;
+
+alter table `orders` drop column `user_id`;
+
+alter table `orders` add column `job_id` int not null after `updated_at`;
+
+alter table `orders` add constraint `ord_fk` foreign key (`job_id`) references `jobs`(`id`) on update CASCADE on delete CASCADE;
 
 create table if not exists jobs(
   `id` int not null AUTO_INCREMENT primary KEY,
@@ -66,6 +79,9 @@ create table if not exists team_mems(
   key `team_mems_fk`(`user_id`),
   constraint `team_mems_fk` foreign key(`user_id`) references `users`(`id`) on delete cascade
 ) engine=innodb auto_increment=1000 default charset=latin1;
+
+alter table `team_mems` CHANGE `member2` client_email varchar(30);
+alter table `team_mems` change member3 sub_contractor varchar(30);
   
 
 CREATE TABLE IF NOT EXISTS 
@@ -85,9 +101,7 @@ CREATE TABLE IF NOT EXISTS
   ) ENGINE = InnoDB AUTO_INCREMENT = 3 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci
 
 
-
-use cms;
-  CREATE TABLE IF NOT EXISTS `mri_reports` (
+  CREATE TABLE IF NOT EXISTS `reports` (
     `id` INT not null auto_increment,    
     `purchase_requisition` tinyint(1) not null default '0',
     `is_quality` tinyint(1) not null default '0',
@@ -109,12 +123,45 @@ use cms;
     `signature` varchar(50),
     `created_at` datetime not null default current_timestamp,
     `updated_at` datetime not null default current_timestamp on update current_timestamp,
-    `project_id` INT not null
+    `job_id` INT not null,
+    `user_id` int not null,
+    `report_type`
     primary key(`id`),
-    key `mri_fkey` (`project_id`),
-    constraint `mri_fk` foreign key(`project_id`) references `projects`(`id`) on delete cascade
+    key `mri_reports_relation_1` (`job_id`),
+    constraint `mri_reports_relation_1` foreign key(`job_id`) references `jobs`(`id`) on delete cascade
   ) engine=innodb auto_increment=1000 default charset=latin1;
 
+alter table `reports` drop foreign key `reports_relation_1`;
+alter table `reports` drop column `job_id`;
 
-  
+alter table `reports` add column `order_id` int not null after `updated_at`;
+alter table `reports` add constraint `mri_fk` foreign key (`order_id`) REFERENCES `orders`(`id`) on update cascade on delete cascade;
 
+alter table `reports` add column `status` ENUM('pending', 'approved', 'rejected', 'info') default 'pending';
+
+alter table `reports` add column `remark` VARCHAR(200);
+
+alter table `reports` add column `user_id` int;
+
+alter table `reports` add constraint `mki_ufk` foreign key (`user_id`) REFERENCES `users`(`id`) on update cascade;
+
+alter table `mri_reports` rename to `reports`;
+
+alter table `reports` add column `report_type` varchar(20);
+
+CREATE table IF NOT EXISTS `comments`(
+  `id` int not null auto_increment,
+  `approve_comment` varchar(50),
+  `reject_comment` varchar(50),
+  `report_id` int,
+  `created_at` datetime not null default current_timestamp,
+  `updated_at` datetime not null default current_timestamp on update current_timestamp,
+  primary key(`id`),
+  key `comment_fk`(`mri_report_id`),
+  constraint `comment_fk` foreign key (`mri_report_id`) REFERENCES `mri_reports`(`id`) on update cascade
+) ENGINE=Innodb AUTO_INCREMENT=1000 default charset=latin1;
+
+alter table `comments` drop foreign key `comment_fk`;
+alter table `comments` CHANGE `mri_report_id` `report_id` int;
+
+alter table `comments` add constraint `comment_fk` foreign key (`report_id`) REFERENCES `reports` (`id`) on update CASCADE;

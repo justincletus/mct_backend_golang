@@ -25,11 +25,6 @@ type ClientUploader struct {
 	UploadPath string
 }
 
-// type ReportStruct struct {
-// 	Id string
-// 	Status string
-// }
-
 var uploader *ClientUploader
 
 func init() {
@@ -102,37 +97,55 @@ func UploadFile(c *fiber.Ctx) error {
 	})
 }
 
-func convertStringBool(flag string) bool {
-	if flag == "yes" {
-		return true
-	} else if flag == "no" {
-		return false
-	} else {
-		return false
-	}
-}
-
 func AddReport(c *fiber.Ctx) error {
 
 	var data map[string]interface{}
 
 	err := c.BodyParser(&data)
-
 	if err != nil {
 		return c.Status(400).JSON(fiber.Map{
 			"message": "not able get the post data",
 		})
 	}
 
-	fmt.Println(data)
+	uId, err := GetUserId(c)
+	if err != nil {
+		return fiber.NewError(404, "user not found")
+	}
 
-	//fmt.Println(data)
 	var job models.Job
+	var job_id = 0
 
-	database.DB.Where("id=?", 1000).First(&job)
-	fmt.Println(job)
+	if data["job_no"] != "" {
+		job_no := data["job_no"].(string)
+		job_id, _ = strconv.Atoi(job_no)
+	}
 
-	report := models.MRI_Report{
+	database.DB.Where("id=?", job_id).First(&job)
+
+	// fmt.Println(job)
+
+	var order models.Order
+	order.Project = data["project"].(string)
+	order.Description = data["description"].(string)
+	order.RequisitionNo = data["requisition_no"].(string)
+	order.PurchaseOrderNo = data["purchase_order_no"].(string)
+	order.DeliveryNoteNo = data["delivery_note_no"].(string)
+	order.DateOFDelivery = data["date_of_delivery"].(string)
+	order.JobId = job.Id
+	order.Job = job
+
+	//fmt.Println(order)
+
+	txt := database.DB.Create(&order)
+	if txt.RowsAffected == 0 {
+		fmt.Println(txt.Error)
+		return c.Status(400).JSON(fiber.Map{
+			"message": "order details not saved",
+		})
+	}
+
+	report := models.Report{
 		PurchaseRequisition:     data["purchase_requisition"].(bool),
 		IsQuality:               data["is_quality"].(bool),
 		IsQuantity:              data["is_quantity"].(bool),
@@ -151,139 +164,80 @@ func AddReport(c *fiber.Ctx) error {
 		Comment:                 data["comment"].(string),
 		Name:                    data["name"].(string),
 		Signature:               data["signature"].(string),
-		JobId:                   job.Id,
-		Job:                     job,
+		Status:                  "pending",
+		CreatedAt:               time.Now().Format("2006-01-02 15:04:05"),
+		OrderId:                 order.Id,
+		Order:                   order,
+		UserId:                  uId,
+		ReportType:              data["report_type"].(string),
 	}
-
-	fmt.Println(report)
 
 	txtDB := database.DB.Create(&report)
 	rId := txtDB.RowsAffected
 	if rId == 0 {
 		fmt.Println(txtDB.Error)
 		return c.Status(400).JSON(fiber.Map{
-			"message": fmt.Sprintf("%v", txtDB.Error),
+			"message": fmt.Sprintf("%v\n", txtDB.Error),
 		})
-
 	}
 
-	// fmt.Println(report)
+	var user models.User
+
+	database.DB.Where("id=?", uId).First(&user)
+
+	if user.Id != 0 {
+		var team models.TeamMem
+		teamTxt := database.DB.Where("sub_contractor=?", user.Email).First(&team)
+		teamID := teamTxt.RowsAffected
+
+		if teamID != 0 {
+			id := strconv.Itoa(report.Id)
+			eMailStruct := utils.EmailBody{
+				Id:     id,
+				Status: report.Status,
+			}
+
+			err = eMailStruct.SendEmail(string(user.Email), "Inspection Report", "report_create.html")
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+
+			remtHost := utils.GetRemoteHostAddress(c)
+
+			eMailStructMgr := utils.EmailBody{
+				Email:  user.Email,
+				Status: report.Status,
+				Id:     id,
+				Url:    remtHost,
+			}
+
+			err = eMailStructMgr.SendEmail(string(team.ContractorEmail), "Inspection Report", "create-rpt-mgr.html")
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+		}
+	}
 
 	return c.Status(201).JSON(fiber.Map{
 		"data": report,
 	})
 }
 
-func CreateReport(ctx *fiber.Ctx) error {
-
-	title1 := ctx.FormValue("data")
-	username := ctx.FormValue("username")
-
-	file1, err := ctx.FormFile("file")
-	if err != nil {
-		fmt.Println(err)
-		return ctx.Status(400).JSON(fiber.Map{
-			"message": "file not received",
-		})
-	}
-
-	blobFile1, err := file1.Open()
-	if err != nil {
-		return ctx.Status(400).JSON(fiber.Map{
-			"message": "file is not able open",
-		})
-	}
-
-	filePath1, err := uploader.UploadFile(blobFile1, file1.Filename)
-	if err != nil {
-		return ctx.Status(500).JSON(fiber.Map{
-			"message": "file upload fail",
-		})
-	}
-
-	var user models.User
-
-	database.DB.Where("username", username).First(&user)
-	if user.Id == 0 {
-		return ctx.Status(404).JSON(fiber.Map{
-			"message": "user not found",
-		})
-	}
-
-	//fmt.Println(manager.Email)
-
-	report := models.Report{
-		Title1: title1,
-		File1:  filePath1,
-		Uid:    user.Id,
-		User:   user,
-		Status: "pending",
-	}
-
-	database.DB.Create(&report)
-	if report.Id == 0 {
-		return ctx.Status(400).JSON(fiber.Map{
-			"message": "report creation is failed",
-		})
-	}
-
-	id := strconv.Itoa(int(report.Id))
-
-	eMailStruct := utils.EmailBody{
-		Id:     id,
-		Status: report.Status,
-	}
-
-	//fmt.Println(user.Email)
-
-	err = eMailStruct.SendEmail(string(user.Email), "Inspection Report", "report_create.html")
-	if err != nil {
-		fmt.Println(err.Error())
-	}
-
-	var team models.TeamMem
-	database.DB.Where("members", user.Email).First(&team)
-
-	if team.Id != 0 {
-		//fmt.Println(team.UserId)
-		var manager models.User
-		database.DB.Where("id=?", team.UserId).First(&manager)
-
-		remtHost := utils.GetRemoteHostAddress(ctx)
-
-		eMailStructMgr := utils.EmailBody{
-			Fullname: manager.Fullname,
-			Email:    user.Email,
-			Status:   report.Status,
-			Id:       id,
-			Url:      remtHost,
-		}
-
-		err = eMailStructMgr.SendEmail(string(manager.Email), "Inspection Report", "create-rpt-mgr.html")
-		if err != nil {
-			fmt.Println(err.Error())
-		}
-	}
-
-	return ctx.Status(201).JSON(fiber.Map{
-		"message": "report saved",
-	})
-
-}
-
 func GetAllReports(c *fiber.Ctx) error {
 
-	var reports []models.MRI_Report
+	var reports []models.Report
 
 	database.DB.Order("created_at desc").Find(&reports)
 
-	var reps []models.MRI_ReportResponse
-	var rep models.MRI_ReportResponse
+	var reps []models.ReportResponse
+	var rep models.ReportResponse
 
 	for _, item := range reports {
-		tmp_project := getProject(item.JobId)
-		rep.MRI_Report = item
-		rep.Job = tmp_project
+		tmp_project := getOrder(item.OrderId)
+		job := getJob(tmp_project.JobId)
+		rep.Report = item
+		rep.Order = tmp_project
+		rep.Job = job
 		reps = append(reps, rep)
 	}
 
@@ -292,11 +246,18 @@ func GetAllReports(c *fiber.Ctx) error {
 	})
 }
 
-func getProject(id int) models.Job {
-	var project models.Job
+func getOrder(id int) models.Order {
+	var order models.Order
 
-	database.DB.Where("id=?", id).First(&project)
-	return project
+	database.DB.Where("id=?", id).First(&order)
+	return order
+}
+
+func getJob(id int) models.Job {
+	var job models.Job
+	database.DB.Where("id=?", id).First(&job)
+
+	return job
 }
 
 func GetReports(ctx *fiber.Ctx) error {
@@ -312,36 +273,47 @@ func GetReports(ctx *fiber.Ctx) error {
 
 func GetReportById(c *fiber.Ctx) error {
 	id := c.Params("id")
+	var ReportResponse models.ReportResponse
 	var report models.Report
 	database.DB.Where("id=?", id).First(&report)
 	if report.Id == 0 {
+
 		return c.Status(404).JSON(fiber.Map{
 			"message": "Report not found",
 		})
 	}
 
+	var order models.Order
+	database.DB.Where("id=?", report.OrderId).First(&order)
+
+	var job models.Job
+	database.DB.Where("id=?", order.JobId).First(&job)
+
+	ReportResponse.Report = report
+	ReportResponse.Order = order
+	ReportResponse.Job = job
+
 	return c.JSON(fiber.Map{
-		"data": report,
+		"data": ReportResponse,
 	})
 }
 
 func GetReportByUsername(c *fiber.Ctx) error {
 	username := c.Params("username")
+
 	var user models.User
 	database.DB.Where("username", username).First(&user)
+
 	var reports []models.Report
 
-	if user.Role == "manager" {
+	if user.Role == "contractor" {
 		var team models.TeamMem
-		fmt.Println(user.Id)
+		//fmt.Println(user.Id)
+		database.DB.Where("contractor_email=?", user.Email).First(&team)
+		var subContractor models.User
+		database.DB.Where("email=?", team.SubContractor).First(&subContractor)
 
-		database.DB.Where("user_id=?", user.Id).First(&team)
-		fmt.Println(team.Members)
-
-		var repUser models.User
-		database.DB.Where("email=?", team.Members).First(&repUser)
-
-		database.DB.Where("uid=?", repUser.Id).Find(&reports)
+		database.DB.Where("user_id=?", subContractor.Id).Find(&reports)
 
 		return c.Status(200).JSON(fiber.Map{
 			"data": reports,
@@ -349,7 +321,7 @@ func GetReportByUsername(c *fiber.Ctx) error {
 
 	}
 
-	database.DB.Where("uid=?", user.Id).Find(&reports)
+	database.DB.Where("user_id=?", user.Id).Find(&reports)
 
 	return c.Status(200).JSON(fiber.Map{
 		"data": reports,
@@ -390,7 +362,7 @@ func UpdateReport(c *fiber.Ctx) error {
 	if err != nil {
 		//fmt.Println(err)
 		if err.Error() == "there is no uploaded file associated with the given key" {
-			report.Title1 = title1
+			report.Name = title1
 			database.DB.Save(&report)
 			return c.Status(200).JSON(fiber.Map{
 				"message": "report updated",
@@ -416,8 +388,8 @@ func UpdateReport(c *fiber.Ctx) error {
 		})
 	}
 
-	report.Title1 = title1
-	report.File1 = filePath1
+	report.Name = title1
+	report.Signature = filePath1
 
 	database.DB.Save(&report)
 
@@ -440,33 +412,60 @@ func UpdateReportMgr(c *fiber.Ctx) error {
 		})
 	}
 
+	fmt.Println(body)
+
+	var comment models.Comment
+
 	report.Status = body["status"]
 	database.DB.Save(&report)
 
+	if body["status"] == "approved" {
+		comment.ApproveComment = body["comment"]
+	} else if body["status"] == "reject" {
+		comment.RejectComment = body["comment"]
+	}
+
+	if body["comment"] != "" {
+		comment.MriReportId = report.Id
+		database.DB.Create(&comment)
+	}
+
 	var user models.User
 
-	database.DB.Where("id=?", report.Uid).First(&user)
+	database.DB.Where("id=?", report.UserId).First(&user)
+
+	var team models.TeamMem
+
+	database.DB.Where("sub_contractor=?", user.Email).First(&team)
 
 	emailBody := utils.EmailBody{
 		Id:     strconv.FormatInt(int64(report.Id), 10),
 		Status: report.Status,
+		Email:  team.ContractorEmail,
 	}
 
 	if report.Status == "approved" {
-		err = emailBody.SendEmail(string(user.Email), "Report Approved", "report_approval.html")
+		// err = emailBody.SendEmail(string(user.Email), "Report Approved", "report_approval.html")
+		// if err != nil {
+		// 	fmt.Println(err)
+		// }
+
+		err = emailBody.SendEmail(string(team.ClientEmail), "Inspection Report", "create-client-rpt.html")
 		if err != nil {
-			fmt.Println(err)
+			fmt.Errorf("Error %s\n", err.Error())
 		}
 
 	} else if report.Status == "reject" {
+		emailBody.Message = body["comment"]
 		err = emailBody.SendEmail(string(user.Email), "Report Rejected", "report_reject.html")
 		if err != nil {
 			fmt.Println(err)
 		}
+
 	}
 
 	return c.Status(200).JSON(fiber.Map{
-		"data": report,
+		"data": "report",
 	})
 
 }

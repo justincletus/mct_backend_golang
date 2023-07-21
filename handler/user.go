@@ -108,7 +108,6 @@ func Register(c *fiber.Ctx) error {
 		return c.Status(201).JSON(fiber.Map{
 			"data": user,
 		})
-
 	}
 
 }
@@ -118,6 +117,8 @@ func getUsername(name string) string {
 	if strings.Contains(name, " ") {
 		str := strings.Split(name, " ")
 		name = strings.Join(str, "")
+	} else if len(name) > 5 {
+		name = name[0:4]
 	}
 
 	timeValue := strconv.Itoa(int(time.Now().Unix()))
@@ -265,15 +266,6 @@ func EmailVerify(c *fiber.Ctx) error {
 }
 
 func GetAllUsers(c *fiber.Ctx) error {
-
-	_, err := ValidateUser(c)
-
-	if err != nil {
-		return c.Status(401).JSON(fiber.Map{
-			"message": err.Error(),
-		})
-	}
-
 	var user []models.User
 	database.DB.Order("created_at desc").Find(&user)
 
@@ -282,7 +274,7 @@ func GetAllUsers(c *fiber.Ctx) error {
 	})
 }
 
-func ValidateUser(c *fiber.Ctx) (int, error) {
+func GetUserId(c *fiber.Ctx) (int, error) {
 	cookie := c.Cookies("jwt")
 	appSecret := config.GetAppSecret()
 	if cookie != "" {

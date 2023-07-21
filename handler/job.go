@@ -28,7 +28,7 @@ func CreateJob(c *fiber.Ctx) error {
 		})
 	}
 
-	u_id, err := ValidateUser(c)
+	u_id, err := GetUserId(c)
 	if err != nil {
 		c.Status(400).JSON(fiber.Map{
 			"message": err.Error(),
@@ -62,6 +62,16 @@ func CreateJob(c *fiber.Ctx) error {
 		"id": job.Id,
 	})
 
+}
+
+func GetJobs(c *fiber.Ctx) error {
+	var jobs []models.Job
+
+	database.DB.Order("created_at desc").Find(&jobs)
+
+	return c.Status(200).JSON(fiber.Map{
+		"data": jobs,
+	})
 }
 
 func GetProjects(c *fiber.Ctx) error {

@@ -1,26 +1,15 @@
 package models
 
-import "gorm.io/gorm"
+type Status string
+
+const (
+	StatusPending  Status = "pending"
+	StatusApproved Status = "approved"
+	StatusRejected Status = "rejected"
+	StatusInfo            = "info"
+)
 
 type Report struct {
-	gorm.Model
-
-	Id           uint   `db:"id" json:"id" gorm:"primaryKey; autoIncrement:true"`
-	Title1       string `db:"title1" json:"title1"`
-	File1        string `db:"file1" json:"file1"`
-	Title2       string `db:"title2" json:"title2"`
-	File2        string `db:"file2" json:"file2"`
-	Title3       string `db:"title3" json:"title3"`
-	File3        string `db:"file3" json:"file3"`
-	Title4       string `db:"title4" json:"title4"`
-	File4        string `db:"file4" json:"file4"`
-	Status       string `db:"status" json:"status" gorm:"column:status;type:enum('approved','reject','pending');default:'pending'"`
-	Uid          uint   `db:"uid" json:"uid" gorm:"index"`
-	UserFullName string `db:"user_fullname" json:"user_fullname" gorm:"default:null"`
-	User         User   `json:"user" gorm:"foreignKey:Uid"`
-}
-
-type MRI_Report struct {
 	Id                      int    `db:"id" json:"id"`
 	PurchaseRequisition     bool   `db:"purchase_requisition" json:"purchase_requisition"`
 	IsQuality               bool   `db:"is_quality" json:"is_quality"`
@@ -40,11 +29,25 @@ type MRI_Report struct {
 	Comment                 string `db:"comment;omitempty" json:"comment"`
 	Name                    string `db:"name" json:"name"`
 	Signature               string `db:"signature;omitempty" json:"sign"`
-	JobId                   int    `db:"job_id;omitempty" json:"job_id"`
-	Job                     Job    `json:"job"`
+	Status                  string `db:"status;omitempty" json:"status"`
+	Remark                  string `db:"remark;omitempty" json:"remark"`
+	CreatedAt               string `json:"created_at"`
+	OrderId                 int    `db:"order_id;omitempty" json:"order_id"`
+	Order                   Order  `json:"order"`
+	UserId                  int    `db:"user_id" json:"user_id"`
+	User                    User   `json:"user"`
+	ReportType              string `db:"report_type;omitempty" json:"report_type"`
 }
 
-type MRI_ReportResponse struct {
-	MRI_Report MRI_Report `json:"mri_report"`
-	Job        Job        `json:"job"`
+type ReportResponse struct {
+	Report Report `json:"report"`
+	Order  Order  `json:"order"`
+	Job    Job    `json:"job"`
+}
+
+type Comment struct {
+	Id             int    `db:"id" json:"id"`
+	ApproveComment string `db:"approve_comment" json:"approve_comment"`
+	RejectComment  string `db:"reject_comment" json:"reject_comment"`
+	MriReportId    int    `db:"mri_report_id" json:"mri_report_id"`
 }
