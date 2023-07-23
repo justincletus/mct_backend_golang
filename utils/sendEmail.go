@@ -30,10 +30,15 @@ type EmailBody struct {
 }
 
 // SendEmail function receive from email address and html file
-func (e_msg EmailBody) SendEmail(email string, subject string, e_temp string) error {
+func (e_msg EmailBody) SendEmail(email string, subject string, e_temp string, options ...string) error {
 	emailConfig, err := config.Config()
+	ccEmail := ""
 	if err != nil {
 		return fmt.Errorf("email configuration values not set %v", err.Error())
+	}
+
+	if len(options) > 0 {
+		ccEmail = options[0]
 	}
 
 	from := emailConfig["smtp_user"]
@@ -56,6 +61,9 @@ func (e_msg EmailBody) SendEmail(email string, subject string, e_temp string) er
 	m := gomail.NewMessage()
 	m.SetHeader("From", from)
 	m.SetHeader("To", email)
+	if ccEmail != "" {
+		m.SetHeader("Cc", ccEmail)
+	}
 	m.SetHeader("Subject", subject)
 	m.SetBody("text/html", body.String())
 	m.AddAlternative("text/plain", html2text.HTML2Text(body.String()))

@@ -17,6 +17,8 @@ create table if not exists `users`(
   primary key(`id`)
   ) engine=innodb auto_increment=1000 default charset=latin1;
 
+  alter table `users` add column `status` enum('active', 'inactive') default 'inactive';
+
 alter table `users` MODIFY column role VARCHAR(20) default "user";
 
 CREATE TABLE IF NOT EXISTS `projects` (
@@ -165,3 +167,22 @@ alter table `comments` drop foreign key `comment_fk`;
 alter table `comments` CHANGE `mri_report_id` `report_id` int;
 
 alter table `comments` add constraint `comment_fk` foreign key (`report_id`) REFERENCES `reports` (`id`) on update CASCADE;
+
+create table IF NOT EXISTS `client_reports`(
+  `id` int not null auto_increment,
+  `is_specification` TINYINT(1) not null DEFAULT '0',
+  `comment` varchar(200),
+  `signature` varchar(100),
+  `signing_date` datetime not null default current_timestamp,
+  `created_at` datetime not null default current_timestamp,
+  `updated_at` datetime not null default current_timestamp on update current_timestamp,
+  `report_id` int,
+  primary key(`id`),
+  key `client_fk`(`report_id`),
+  constraint `client_fk` foreign key (`report_id`) references `reports`(`id`) on update CASCADE
+) engine=innodb AUTO_INCREMENT=1000 default charset=latin1;
+
+alter table `client_reports` add COLUMN name varchar(20);
+alter table `client_reports` drop key `client_fk`;
+alter table `client_reports` drop foreign key `client_fk`;
+alter table `client_reports` add constraint `client_fk` foreign key `report_id` REFERENCES `reports` (`id`) on update cascade on delete cascade;

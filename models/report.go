@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type Status string
 
 const (
@@ -40,14 +42,26 @@ type Report struct {
 }
 
 type ReportResponse struct {
-	Report Report `json:"report"`
-	Order  Order  `json:"order"`
-	Job    Job    `json:"job"`
+	Report       Report       `json:"report"`
+	Order        Order        `json:"order"`
+	Job          Job          `json:"job"`
+	ClientReport ClientReport `json:"client_report"`
 }
 
 type Comment struct {
 	Id             int    `db:"id" json:"id"`
 	ApproveComment string `db:"approve_comment" json:"approve_comment"`
 	RejectComment  string `db:"reject_comment" json:"reject_comment"`
-	MriReportId    int    `db:"mri_report_id" json:"mri_report_id"`
+	ReportId       int    `db:"report_id" json:"report_id"`
+}
+
+type ClientReport struct {
+	Id              int       `db:"id" json:"id"`
+	IsSpecification bool      `db:"is_specification" json:"is_specification"`
+	Comment         string    `db:"comment" json:"comment"`
+	Name            string    `db:"name" json:"name"`
+	Signature       string    `db:"signature" json:"signature"`
+	SigningDate     time.Time `db:"signing_date" json:"signing_date"`
+	ReportId        int       `db:"report_id" json:"report_id"`
+	Report          Report
 }

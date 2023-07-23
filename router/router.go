@@ -20,6 +20,8 @@ func Setup(app *fiber.App) {
 	api.Get("/user/alluser", middelware.Protected(), handler.GetAllUsers)
 	api.Post("/user/create_team", middelware.Protected(), handler.CreateTeam)
 	api.Get("/user/teams", middelware.Protected(), handler.GetTeams)
+	api.Get("/teams/:id", middelware.Protected(), handler.GetTeamById)
+	api.Put("/teams/:id", middelware.Protected(), handler.UpdateTeam)
 	api.Get("/user/:code", handler.EmailVerify)
 	api.Get("/user/:id/edit", middelware.Protected(), handler.GetUserById)
 	api.Post("/user/:id/edit", middelware.Protected(), handler.UpdateUserById)

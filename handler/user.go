@@ -45,11 +45,11 @@ func Register(c *fiber.Ctx) error {
 	user.Mobile = data["mobile"]
 	user.Password = passwordBytes
 	user.Username = getUsername(data["fullname"])
-	if data["role"] == "" {
-		data["role"] = "user"
+	if data["user_role"] == "" {
+		data["user_role"] = "user"
 	}
 
-	user.Role = data["role"]
+	user.Role = data["user_role"]
 	user.Code = utils.CreateUuid()
 
 	if data["email_verified"] == "true" {
@@ -114,13 +114,9 @@ func Register(c *fiber.Ctx) error {
 
 func getUsername(name string) string {
 	name = strings.ToLower(name)
-	if strings.Contains(name, " ") {
-		str := strings.Split(name, " ")
-		name = strings.Join(str, "")
-	} else if len(name) > 5 {
+	if len(name) > 5 {
 		name = name[0:4]
 	}
-
 	timeValue := strconv.Itoa(int(time.Now().Unix()))
 	name += timeValue
 

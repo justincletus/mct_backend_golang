@@ -1,6 +1,9 @@
 package handler
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/justincletus/cms/database"
 	"github.com/justincletus/cms/models"
@@ -23,6 +26,9 @@ func CreateTeam(c *fiber.Ctx) error {
 			"message": "user account not found",
 		})
 	}
+
+	// var members []string
+	// members = append(members, data["members"])
 
 	team := models.TeamMem{
 		Title:           data["title"],
@@ -51,6 +57,82 @@ func GetTeams(c *fiber.Ctx) error {
 
 	return c.Status(200).JSON(fiber.Map{
 		"data": teamMem,
+	})
+
+}
+
+func GetTeamById(c *fiber.Ctx) error {
+	id := c.Params("id")
+
+	var team models.TeamMem
+	database.DB.Where("id=?", id).First(&team)
+	if team.Id == 0 {
+		return fiber.NewError(404, "team by id not found")
+	}
+
+	var users []models.User
+
+	database.DB.Order("id desc").Where("role=?", "user").Find(&users)
+
+	return c.Status(200).JSON(fiber.Map{
+		"data":  team,
+		"users": users,
+	})
+
+}
+
+func UpdateTeam(c *fiber.Ctx) error {
+	id := c.Params("id")
+	tID, _ := strconv.ParseInt(id, 10, 32)
+
+	var team models.TeamMem
+	database.DB.Where("id=?", int(tID)).First(&team)
+	if team.Id == 0 {
+		return fiber.NewError(404, "team with id is not found")
+	}
+
+	var data map[string]string
+	err := c.BodyParser(&data)
+	if err != nil {
+		return fiber.NewError(500, "error in post data")
+	}
+
+	//var tmpMembers []string
+
+	var flag = false
+
+	if team.Members == "" {
+		team.Members = data["member"]
+	} else {
+		if data["member"] == team.Members {
+			return fiber.NewError(400, "user already exists")
+		} else {
+			if strings.Contains(team.Members, ",") {
+				members := strings.Split(team.Members, ",")
+				for _, member := range members {
+					if member == data["member"] {
+						flag = true
+						break
+					}
+				}
+
+				if flag {
+					return fiber.NewError(500, "user already in group")
+				} else {
+					team.Members += "," + data["member"]
+				}
+
+			} else {
+				team.Members += "," + data["member"]
+			}
+		}
+
+	}
+
+	database.DB.Save(&team)
+
+	return c.Status(200).JSON(fiber.Map{
+		"data": team,
 	})
 
 }

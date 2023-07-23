@@ -289,9 +289,13 @@ func GetReportById(c *fiber.Ctx) error {
 	var job models.Job
 	database.DB.Where("id=?", order.JobId).First(&job)
 
+	var clientReport models.ClientReport
+	database.DB.Where("report_id=?", id).First(&clientReport)
+
 	ReportResponse.Report = report
 	ReportResponse.Order = order
 	ReportResponse.Job = job
+	ReportResponse.ClientReport = clientReport
 
 	return c.JSON(fiber.Map{
 		"data": ReportResponse,
@@ -310,6 +314,9 @@ func GetReportByUsername(c *fiber.Ctx) error {
 		var team models.TeamMem
 		//fmt.Println(user.Id)
 		database.DB.Where("contractor_email=?", user.Email).First(&team)
+		fmt.Println("--------")
+		fmt.Println(team)
+		fmt.Println("-------")
 		var subContractor models.User
 		database.DB.Where("email=?", team.SubContractor).First(&subContractor)
 
@@ -319,6 +326,15 @@ func GetReportByUsername(c *fiber.Ctx) error {
 			"data": reports,
 		})
 
+	} else if user.Role == "client" {
+		var team models.TeamMem
+		database.DB.Where("client_email=?", user.Email).First(&team)
+		var subContractor models.User
+		database.DB.Where("email=?", team.SubContractor).First(&subContractor)
+		database.DB.Where("user_id=?", subContractor.Id).Find(&reports)
+		return c.Status(200).JSON(fiber.Map{
+			"data": reports,
+		})
 	}
 
 	database.DB.Where("user_id=?", user.Id).Find(&reports)
@@ -403,7 +419,7 @@ func UpdateReportMgr(c *fiber.Ctx) error {
 	id := c.Params("id")
 	var report models.Report
 	database.DB.Where("id=?", id).First(&report)
-	var body map[string]string
+	var body map[string]interface{}
 
 	err := c.BodyParser(&body)
 	if err != nil {
@@ -414,58 +430,95 @@ func UpdateReportMgr(c *fiber.Ctx) error {
 
 	fmt.Println(body)
 
-	var comment models.Comment
-
-	report.Status = body["status"]
-	database.DB.Save(&report)
-
-	if body["status"] == "approved" {
-		comment.ApproveComment = body["comment"]
-	} else if body["status"] == "reject" {
-		comment.RejectComment = body["comment"]
-	}
-
-	if body["comment"] != "" {
-		comment.MriReportId = report.Id
-		database.DB.Create(&comment)
-	}
-
 	var user models.User
-
 	database.DB.Where("id=?", report.UserId).First(&user)
 
 	var team models.TeamMem
-
 	database.DB.Where("sub_contractor=?", user.Email).First(&team)
 
-	emailBody := utils.EmailBody{
-		Id:     strconv.FormatInt(int64(report.Id), 10),
-		Status: report.Status,
-		Email:  team.ContractorEmail,
-	}
+	var client models.User
 
-	if report.Status == "approved" {
-		// err = emailBody.SendEmail(string(user.Email), "Report Approved", "report_approval.html")
-		// if err != nil {
-		// 	fmt.Println(err)
-		// }
+	uid, _ := GetUserId(c)
+	database.DB.Where("id=?", uid).First(&client)
 
-		err = emailBody.SendEmail(string(team.ClientEmail), "Inspection Report", "create-client-rpt.html")
-		if err != nil {
-			fmt.Errorf("Error %s\n", err.Error())
+	if client.Role == "client" {
+		var clientReport models.ClientReport
+		if body["is_specification"] == "yes" {
+			clientReport.IsSpecification = true
+		} else {
+			clientReport.IsSpecification = false
+		}
+		tmpSignData := body["signing_date"].(string)
+		signingDate, _ := time.Parse("2006-01-02", tmpSignData)
+		clientReport.Name = body["name"].(string)
+		clientReport.Signature = body["signature"].(string)
+		clientReport.Comment = body["comment"].(string)
+		clientReport.SigningDate = signingDate
+		clientReport.ReportId = report.Id
+		transAct := database.DB.Create(&clientReport)
+		if transAct.RowsAffected == 0 {
+			return fiber.NewError(500, "client form update failed")
 		}
 
-	} else if report.Status == "reject" {
-		emailBody.Message = body["comment"]
-		err = emailBody.SendEmail(string(user.Email), "Report Rejected", "report_reject.html")
+		emailBody := utils.EmailBody{
+			Id:      strconv.FormatInt(int64(report.Id), 10),
+			Status:  report.Status,
+			Message: "This reported is accepted by client",
+		}
+
+		fmt.Println(team.ContractorEmail)
+
+		err = emailBody.SendEmail(team.SubContractor, "Report Approved", "report_approval.html", team.ContractorEmail)
 		if err != nil {
-			fmt.Println(err)
+			fmt.Errorf("something went wrong in sending report %s", err.Error())
+		}
+
+	} else if client.Role == "contractor" {
+
+		report.Status = body["status"].(string)
+		database.DB.Save(&report)
+
+		var comment models.Comment
+
+		if body["status"] == "approved" {
+			comment.ApproveComment = body["comment"].(string)
+		} else if body["status"] == "reject" {
+			comment.RejectComment = body["comment"].(string)
+		}
+
+		if body["comment"] != "" {
+			comment.ReportId = report.Id
+			database.DB.Create(&comment)
+		}
+
+		emailBody := utils.EmailBody{
+			Id:     strconv.FormatInt(int64(report.Id), 10),
+			Status: report.Status,
+			Email:  team.ContractorEmail,
+		}
+
+		if report.Status == "approved" {
+			remtHost := utils.GetRemoteHostAddress(c)
+			emailBody.Url = remtHost
+
+			err = emailBody.SendEmail(string(team.ClientEmail), "Inspection Report", "create-client-rpt.html")
+			if err != nil {
+				fmt.Errorf("Error %s\n", err.Error())
+			}
+
+		} else if report.Status == "rejected" {
+			emailBody.Message = body["comment"].(string)
+			err = emailBody.SendEmail(string(user.Email), "Report Rejected", "report_reject.html")
+			if err != nil {
+				fmt.Println(err)
+			}
+
 		}
 
 	}
 
 	return c.Status(200).JSON(fiber.Map{
-		"data": "report",
+		"data": report,
 	})
 
 }
