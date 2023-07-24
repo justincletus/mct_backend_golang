@@ -45,6 +45,9 @@ CREATE TABLE IF NOT EXISTS `orders`(
   constraint `ord_key` foreign key(`user_id`) references `users`(`id`) on delete cascade
 ) engine=innodb auto_increment=1000 default charset=latin1;
 
+alter table `orders` add column `report_id` int;
+alter table `orders` add constraint `order_rept_fk` foreign key (`report_id`) references `reports` (`id`) on update cascade on delete cascade;
+
 alter table `orders` MODIFY COLUMN `requisition_no` varchar(30);
 alter table `orders` MODIFY column `purchase_order_no` VARCHAR(30);
 alter table `orders` MODIFY COLUMN `delivery_note_no` VARCHAR(30);
@@ -58,7 +61,7 @@ alter table `orders` add constraint `ord_fk` foreign key (`job_id`) references `
 
 create table if not exists jobs(
   `id` int not null AUTO_INCREMENT primary KEY,
-  `name` VARCHAR(50) null null,
+  `name` VARCHAR(50) null,
   `created_at` datetime not null default current_timestamp,
   `updated_at` datetime not null default current_timestamp on update current_timestamp,
   `user_id` int not null,
@@ -84,6 +87,17 @@ create table if not exists team_mems(
 
 alter table `team_mems` CHANGE `member2` client_email varchar(30);
 alter table `team_mems` change member3 sub_contractor varchar(30);
+
+create table if not exists `members`(
+  `id` int not null auto_increment,
+  `email` varchar(100) not null,
+  `team_id` int,
+  `created_at` datetime not null default current_timestamp,
+  `updated_at` datetime not null default current_timestamp on update current_timestamp,
+  primary key(`id`),
+  key `members_fk` (`team_id`),
+  constraint `members_fk` foreign key (`team_id`) references `team_mems` (`id`) on update CASCADE on delete cascade
+) engine=innodb AUTO_INCREMENT=1000 default charset=latin1;
   
 
 CREATE TABLE IF NOT EXISTS 
@@ -186,3 +200,6 @@ alter table `client_reports` add COLUMN name varchar(20);
 alter table `client_reports` drop key `client_fk`;
 alter table `client_reports` drop foreign key `client_fk`;
 alter table `client_reports` add constraint `client_fk` foreign key `report_id` REFERENCES `reports` (`id`) on update cascade on delete cascade;
+
+
+

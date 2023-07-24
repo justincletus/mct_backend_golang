@@ -2,7 +2,6 @@ package handler
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/justincletus/cms/database"
@@ -51,12 +50,14 @@ func CreateTeam(c *fiber.Ctx) error {
 func GetTeams(c *fiber.Ctx) error {
 
 	var teamMem []models.TeamMem
-	//var user models.User
+	var members []models.Member
 
 	database.DB.Order("created_at desc").Find(&teamMem)
+	database.DB.Order("created_at desc").Find(&members)
 
 	return c.Status(200).JSON(fiber.Map{
-		"data": teamMem,
+		"data":    teamMem,
+		"members": members,
 	})
 
 }
@@ -97,42 +98,22 @@ func UpdateTeam(c *fiber.Ctx) error {
 		return fiber.NewError(500, "error in post data")
 	}
 
-	//var tmpMembers []string
+	var member models.Member
+	member.Email = data["member"]
+	member.TeamId = team.Id
 
-	var flag = false
+	database.DB.Create(&member)
 
-	if team.Members == "" {
-		team.Members = data["member"]
-	} else {
-		if data["member"] == team.Members {
-			return fiber.NewError(400, "user already exists")
-		} else {
-			if strings.Contains(team.Members, ",") {
-				members := strings.Split(team.Members, ",")
-				for _, member := range members {
-					if member == data["member"] {
-						flag = true
-						break
-					}
-				}
-
-				if flag {
-					return fiber.NewError(500, "user already in group")
-				} else {
-					team.Members += "," + data["member"]
-				}
-
-			} else {
-				team.Members += "," + data["member"]
-			}
-		}
-
+	if member.Id == 0 {
+		return fiber.NewError(500, "add member to the team failed")
 	}
 
-	database.DB.Save(&team)
+	var members []models.Member
+	database.DB.Order("created_at desc").Find(&members)
 
 	return c.Status(200).JSON(fiber.Map{
-		"data": team,
+		"data":    team,
+		"members": members,
 	})
 
 }

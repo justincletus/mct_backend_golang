@@ -90,8 +90,6 @@ func UploadFile(c *fiber.Ctx) error {
 		})
 	}
 
-	// fmt.Println(filePath)
-
 	return c.Status(200).JSON(fiber.Map{
 		"file_name": filePath,
 	})
@@ -100,6 +98,7 @@ func UploadFile(c *fiber.Ctx) error {
 func AddReport(c *fiber.Ctx) error {
 
 	var data map[string]interface{}
+	var reptID string
 
 	err := c.BodyParser(&data)
 	if err != nil {
@@ -123,8 +122,6 @@ func AddReport(c *fiber.Ctx) error {
 
 	database.DB.Where("id=?", job_id).First(&job)
 
-	// fmt.Println(job)
-
 	var order models.Order
 	order.Project = data["project"].(string)
 	order.Description = data["description"].(string)
@@ -134,8 +131,6 @@ func AddReport(c *fiber.Ctx) error {
 	order.DateOFDelivery = data["date_of_delivery"].(string)
 	order.JobId = job.Id
 	order.Job = job
-
-	//fmt.Println(order)
 
 	txt := database.DB.Create(&order)
 	if txt.RowsAffected == 0 {
@@ -191,23 +186,37 @@ func AddReport(c *fiber.Ctx) error {
 		teamID := teamTxt.RowsAffected
 
 		if teamID != 0 {
-			id := strconv.Itoa(report.Id)
-			eMailStruct := utils.EmailBody{
-				Id:     id,
-				Status: report.Status,
+			reptID = strconv.Itoa(report.Id)
+
+		} else {
+			var members models.Member
+			memTab := database.DB.Where("email=?", user.Email).First(&members)
+			if memTab.RowsAffected != 0 {
+				teamMem := database.DB.Where("id=?", members.TeamId).First(&team)
+				if teamMem.RowsAffected != 0 {
+					reptID = strconv.Itoa(report.Id)
+				}
 			}
 
-			err = eMailStruct.SendEmail(string(user.Email), "Inspection Report", "report_create.html")
-			if err != nil {
-				fmt.Println(err.Error())
-			}
+		}
 
+		eMailStruct := utils.EmailBody{
+			Id:     reptID,
+			Status: report.Status,
+		}
+
+		err = eMailStruct.SendEmail(string(user.Email), "Inspection Report", "report_create.html")
+		if err != nil {
+			fmt.Println(err.Error())
+		}
+
+		if team.Id != 0 {
 			remtHost := utils.GetRemoteHostAddress(c)
 
 			eMailStructMgr := utils.EmailBody{
 				Email:  user.Email,
 				Status: report.Status,
-				Id:     id,
+				Id:     reptID,
 				Url:    remtHost,
 			}
 
@@ -215,7 +224,9 @@ func AddReport(c *fiber.Ctx) error {
 			if err != nil {
 				fmt.Println(err.Error())
 			}
+
 		}
+
 	}
 
 	return c.Status(201).JSON(fiber.Map{
@@ -308,33 +319,38 @@ func GetReportByUsername(c *fiber.Ctx) error {
 	var user models.User
 	database.DB.Where("username", username).First(&user)
 
+	var members []models.Member
+
 	var reports []models.Report
+	var team models.TeamMem
 
-	if user.Role == "contractor" {
-		var team models.TeamMem
-		//fmt.Println(user.Id)
-		database.DB.Where("contractor_email=?", user.Email).First(&team)
-		fmt.Println("--------")
-		fmt.Println(team)
-		fmt.Println("-------")
+	if user.Role == "contractor" || user.Role == "client" {
+		if user.Role == "contractor" {
+			database.DB.Where("contractor_email=?", user.Email).First(&team)
+		} else if user.Role == "client" {
+			database.DB.Where("client_email=?", user.Email).First(&team)
+		}
+
 		var subContractor models.User
 		database.DB.Where("email=?", team.SubContractor).First(&subContractor)
-
 		database.DB.Where("user_id=?", subContractor.Id).Find(&reports)
+
+		database.DB.Where("team_id=?", team.Id).Find(&members)
+		var tmpReports []models.Report
+		var reportUser models.User
+		if len(members) > 0 {
+			for _, item := range members {
+				database.DB.Where("email=?", item.Email).First(&reportUser)
+				database.DB.Where("user_id=?", reportUser.Id).Find(&tmpReports)
+			}
+
+			reports = append(reports, tmpReports...)
+		}
 
 		return c.Status(200).JSON(fiber.Map{
 			"data": reports,
 		})
 
-	} else if user.Role == "client" {
-		var team models.TeamMem
-		database.DB.Where("client_email=?", user.Email).First(&team)
-		var subContractor models.User
-		database.DB.Where("email=?", team.SubContractor).First(&subContractor)
-		database.DB.Where("user_id=?", subContractor.Id).Find(&reports)
-		return c.Status(200).JSON(fiber.Map{
-			"data": reports,
-		})
 	}
 
 	database.DB.Where("user_id=?", user.Id).Find(&reports)

@@ -27,3 +27,9 @@ type TeamMem struct {
 	UserId          int    `json:"user_id"`
 	User            User
 }
+
+type Member struct {
+	Id     int    `db:"id" json:"id"`
+	Email  string `db:"email" json:"email"`
+	TeamId int    `db:"team_id" json:"team_id"`
+}
