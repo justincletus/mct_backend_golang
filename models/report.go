@@ -39,6 +39,11 @@ type Report struct {
 	UserId                  int    `db:"user_id" json:"user_id"`
 	User                    User   `json:"user"`
 	ReportType              string `db:"report_type;omitempty" json:"report_type"`
+	InspEngSign             string `db:"insp_eng_sign;omitempty" json:"insp_eng_sign"`
+	File1                   string `db:"file1;omitempty" json:"file1"`
+	File2                   string `db:"file2;omitempty" json:"file2"`
+	File3                   string `db:"file3;omitempty" json:"file3"`
+	File4                   string `db:"file4;omitempty" json:"file4"`
 }
 
 type ReportResponse struct {
@@ -64,4 +69,8 @@ type ClientReport struct {
 	SigningDate     time.Time `db:"signing_date" json:"signing_date"`
 	ReportId        int       `db:"report_id" json:"report_id"`
 	Report          Report
+	ClientName      string    `db:"client_name" json:"client_name"`
+	ClientEngSign   string    `db:"client_eng_sign;omitempty" json:"client_eng_sign"`
+	ClientSignDate  time.Time `db:"client_sign_date;omitempty" json:"client_sign_date"`
+	ClientComment   string    `db:"client_comment;omitempty" json:"client_comment"`
 }

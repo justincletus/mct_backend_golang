@@ -39,6 +39,11 @@ func Setup(app *fiber.App) {
 	api.Put("/reports/:id/edit", middelware.Protected(), handler.UpdateReport)
 	api.Put("/reports/:id/update", middelware.Protected(), handler.UpdateReportMgr)
 
+	api.Get("/client_reports", middelware.Protected(), handler.GetClientReports)
+	api.Delete("/client_reports/:id", middelware.Protected(), handler.DeleteClientReport)
+	api.Get("/comments", middelware.Protected(), handler.GetComments)
+	api.Delete("/comments/:id", middelware.Protected(), handler.DeleteComment)
+
 	api.Post("/job", middelware.Protected(), handler.CreateJob)
 	api.Get("/job", middelware.Protected(), handler.GetJobs)
 	api.Get("/project", middelware.Protected(), handler.GetProjects)

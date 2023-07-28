@@ -34,7 +34,7 @@ func CreateTeam(c *fiber.Ctx) error {
 		SubContractor:   data["sub_contractor"],
 		ContractorEmail: data["contractor_email"],
 		ClientEmail:     data["client_email"],
-		Members:         data["members"],
+		Members:         data["client_inspector"],
 		UserId:          user.Id,
 		User:            user,
 	}

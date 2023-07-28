@@ -69,6 +69,8 @@ create table if not exists jobs(
   constraint `job_fk` foreign key(`user_id`) references `users`(`id`) on delete cascade 
 ) engine=innodb auto_increment=1000 default charset=latin1;
 
+alter table `jobs` add column `job_id` varchar(50) unique;
+
 create table if not exists team_mems(
   `id` int not null auto_increment primary key,
   `title` varchar(50) not null,  
@@ -165,6 +167,14 @@ alter table `mri_reports` rename to `reports`;
 
 alter table `reports` add column `report_type` varchar(20);
 
+alter table `reports` add column `file1` varchar(60);
+alter table `reports` add column `file2` varchar(60);
+alter table `reports` add column `file3` VARCHAR(60);
+alter table `reports` add column `file4` varchar(60);
+
+alter table `reports` add column `insp_eng_sign` varchar(50);
+
+
 CREATE table IF NOT EXISTS `comments`(
   `id` int not null auto_increment,
   `approve_comment` varchar(50),
@@ -201,5 +211,11 @@ alter table `client_reports` drop key `client_fk`;
 alter table `client_reports` drop foreign key `client_fk`;
 alter table `client_reports` add constraint `client_fk` foreign key `report_id` REFERENCES `reports` (`id`) on update cascade on delete cascade;
 
+alter table `client_reports` add column `client_eng_sign` varchar(100);
+alter table `client_reports` drop column `client_insp_sign`;
+
+alter table `client_reports` add column `client_name` varchar(40);
+
+alter table `client_reports` add column `client_sign_date` datetime not null DEFAULT CURRENT_TIMESTAMP; 
 
 

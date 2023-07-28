@@ -165,6 +165,11 @@ func AddReport(c *fiber.Ctx) error {
 		Order:                   order,
 		UserId:                  uId,
 		ReportType:              data["report_type"].(string),
+		File1:                   data["file1"].(string),
+		File2:                   data["file2"].(string),
+		File3:                   data["file3"].(string),
+		File4:                   data["file4"].(string),
+		InspEngSign:             data["insp_eng_sign"].(string),
 	}
 
 	txtDB := database.DB.Create(&report)
@@ -324,11 +329,13 @@ func GetReportByUsername(c *fiber.Ctx) error {
 	var reports []models.Report
 	var team models.TeamMem
 
-	if user.Role == "contractor" || user.Role == "client" {
+	if user.Role == "contractor" || user.Role == "client" || user.Role == "client_insp" {
 		if user.Role == "contractor" {
 			database.DB.Where("contractor_email=?", user.Email).First(&team)
 		} else if user.Role == "client" {
 			database.DB.Where("client_email=?", user.Email).First(&team)
+		} else if user.Role == "client_insp" {
+			database.DB.Where("members=?", user.Email).First(&team)
 		}
 
 		var subContractor models.User
@@ -371,7 +378,11 @@ func DeleteReport(c *fiber.Ctx) error {
 		})
 	}
 
-	database.DB.Unscoped().Delete(report, id)
+	err := database.DB.Unscoped().Delete(report, id).Error
+	if err != nil {
+		return fiber.NewError(500, "foreign key constraint failed")
+	}
+	//fmt.Println(err)
 
 	return c.Status(200).JSON(fiber.Map{
 		"data": "report deleted",
@@ -444,20 +455,22 @@ func UpdateReportMgr(c *fiber.Ctx) error {
 		})
 	}
 
-	fmt.Println(body)
+	//fmt.Println(body)
 
-	var user models.User
-	database.DB.Where("id=?", report.UserId).First(&user)
+	var reptUser models.User
+	database.DB.Where("id=?", report.UserId).First(&reptUser)
 
-	var team models.TeamMem
-	database.DB.Where("sub_contractor=?", user.Email).First(&team)
+	//if user.Email
 
-	var client models.User
+	var currentUser models.User
 
 	uid, _ := GetUserId(c)
-	database.DB.Where("id=?", uid).First(&client)
+	database.DB.Where("id=?", uid).First(&currentUser)
 
-	if client.Role == "client" {
+	var team models.TeamMem
+	database.DB.Where("contractor_email=?", currentUser.Email).Or("client_email=?", currentUser.Email).Or("members=?", currentUser.Email).First(&team)
+
+	if currentUser.Role == "client_insp" {
 		var clientReport models.ClientReport
 		if body["is_specification"] == "yes" {
 			clientReport.IsSpecification = true
@@ -471,28 +484,14 @@ func UpdateReportMgr(c *fiber.Ctx) error {
 		clientReport.Comment = body["comment"].(string)
 		clientReport.SigningDate = signingDate
 		clientReport.ReportId = report.Id
+		report.Status = body["status"].(string)
+
+		database.DB.Save(&report)
+
 		transAct := database.DB.Create(&clientReport)
 		if transAct.RowsAffected == 0 {
 			return fiber.NewError(500, "client form update failed")
 		}
-
-		emailBody := utils.EmailBody{
-			Id:      strconv.FormatInt(int64(report.Id), 10),
-			Status:  report.Status,
-			Message: "This reported is accepted by client",
-		}
-
-		fmt.Println(team.ContractorEmail)
-
-		err = emailBody.SendEmail(team.SubContractor, "Report Approved", "report_approval.html", team.ContractorEmail)
-		if err != nil {
-			fmt.Errorf("something went wrong in sending report %s", err.Error())
-		}
-
-	} else if client.Role == "contractor" {
-
-		report.Status = body["status"].(string)
-		database.DB.Save(&report)
 
 		var comment models.Comment
 
@@ -524,7 +523,89 @@ func UpdateReportMgr(c *fiber.Ctx) error {
 
 		} else if report.Status == "rejected" {
 			emailBody.Message = body["comment"].(string)
-			err = emailBody.SendEmail(string(user.Email), "Report Rejected", "report_reject.html")
+			err = emailBody.SendEmail(string(reptUser.Email), "Report Rejected", "report_reject.html", team.ContractorEmail)
+			if err != nil {
+				fmt.Println(err)
+			}
+
+		}
+
+		// emailBody := utils.EmailBody{
+		// 	Id:      strconv.FormatInt(int64(report.Id), 10),
+		// 	Status:  report.Status,
+		// 	Message: "This reported is accepted by client",
+		// }
+
+		// fmt.Println(team.ContractorEmail)
+		// err = emailBody.SendEmail(reptUser.Email, "Report Approved", "report_approval.html", team.ContractorEmail)
+		// if err != nil {
+		// 	fmt.Errorf("something went wrong in sending report %s", err.Error())
+		// }
+
+	} else if currentUser.Role == "contractor" {
+
+		report.Status = body["status"].(string)
+		report.Signature = body["contractor_sign"].(string)
+		database.DB.Save(&report)
+
+		if report.Status == "info" {
+			remtHost := utils.GetRemoteHostAddress(c)
+
+			emailBody := utils.EmailBody{
+				Id:     strconv.FormatInt(int64(report.Id), 10),
+				Status: report.Status,
+				Email:  team.ContractorEmail,
+			}
+
+			emailBody.Url = remtHost
+			emailBody.Message = "You are requested to review the report"
+			err = emailBody.SendEmail(string(team.Members), "Inspection Report", "create-client-rpt.html")
+			if err != nil {
+				fmt.Errorf("%s\n", err.Error())
+			}
+		}
+
+	} else if currentUser.Role == "client" {
+		var client_report models.ClientReport
+		fmt.Println(body)
+
+		database.DB.Where("report_id=?", report.Id).First(&client_report)
+
+		client_report.ClientComment = body["client_comment"].(string)
+		client_report.ClientEngSign = body["client_eng_sign"].(string)
+		client_report.ClientName = body["client_name"].(string)
+		tmpSignDate := body["client_sign_date"].(string)
+		signingDate, _ := time.Parse("2006-01-02", tmpSignDate)
+		client_report.ClientSignDate = signingDate
+		report.Status = body["status"].(string)
+		client_report.ReportId = report.Id
+
+		database.DB.Save(report)
+		database.DB.Save(client_report)
+
+		emailBody := utils.EmailBody{
+			Id:     strconv.FormatInt(int64(report.Id), 10),
+			Status: report.Status,
+			Email:  team.ClientEmail,
+		}
+
+		if report.Status == "approved" {
+			remtHost := utils.GetRemoteHostAddress(c)
+			emailBody.Url = remtHost
+
+			err = emailBody.SendEmail(string(team.ContractorEmail), "Report Approved", "report_approval.html", team.Members)
+			if err != nil {
+				fmt.Errorf("Error %s\n", err.Error())
+			}
+
+			err = emailBody.SendEmail(string(reptUser.Email), "Report Approved", "report_approval.html")
+			if err != nil {
+				fmt.Errorf("Error %s\n", err.Error())
+			}
+
+		} else if report.Status == "rejected" {
+			emailBody.Message = body["comment"].(string)
+			err = emailBody.SendEmail(string(reptUser.Email), "Report Rejected", "report_reject.html", team.ContractorEmail)
 			if err != nil {
 				fmt.Println(err)
 			}
