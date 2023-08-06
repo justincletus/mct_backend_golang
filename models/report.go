@@ -71,6 +71,6 @@ type ClientReport struct {
 	Report          Report
 	ClientName      string    `db:"client_name" json:"client_name"`
 	ClientEngSign   string    `db:"client_eng_sign;omitempty" json:"client_eng_sign"`
-	ClientSignDate  time.Time `db:"client_sign_date;omitempty" json:"client_sign_date"`
+	ClientSignDate  time.Time `db:"client_sign_date" json:"client_sign_date"`
 	ClientComment   string    `db:"client_comment;omitempty" json:"client_comment"`
 }

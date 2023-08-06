@@ -117,25 +117,11 @@ func DeleteUser(c *fiber.Ctx) error {
 	})
 }
 
-func deleteUserFromTeam(id int) {
-	var team models.TeamMem
-	database.DB.Where("id=?", id).First(&team)
+// func DeleteUserFromTeam(id int) {
+// 	var team models.TeamMem
+// 	database.DB.Where("id=?", id).First(&team)
 
-	var user models.User
-	database.DB.Where("id=?", id).First(&user)
+// 	var user models.User
+// 	database.DB.Where("id=?", id).First(&user)
 
-	if team.SubContractor == user.Email {
-		if team.Members == "" {
-
-		}
-
-	} else {
-
-	}
-
-	// if strings.Contains(members, ",") {
-
-	// } else {
-
-	// }
-}
+// }

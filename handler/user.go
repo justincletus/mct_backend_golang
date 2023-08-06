@@ -114,6 +114,10 @@ func Register(c *fiber.Ctx) error {
 
 func getUsername(name string) string {
 	name = strings.ToLower(name)
+	if strings.Contains(name, " ") {
+		names := strings.Join(strings.Split(name, " "), "")
+		name = names
+	}
 	if len(name) > 5 {
 		name = name[0:4]
 	}

@@ -46,9 +46,9 @@ func Setup(app *fiber.App) {
 
 	api.Post("/job", middelware.Protected(), handler.CreateJob)
 	api.Get("/job", middelware.Protected(), handler.GetJobs)
-	api.Get("/project", middelware.Protected(), handler.GetProjects)
-	api.Get("/project/:id", middelware.Protected(), handler.GetProjectByID)
-	api.Delete("/project/:id", middelware.Protected(), handler.DeleteProject)
-	api.Put("/project/:id", middelware.Protected(), handler.UpdateProject)
+	api.Get("/job", middelware.Protected(), handler.GetProjects)
+	api.Get("/job/:id", middelware.Protected(), handler.GetProjectByID)
+	api.Delete("/job/:id", middelware.Protected(), handler.DeleteProject)
+	api.Put("/job/:id", middelware.Protected(), handler.UpdateProject)
 
 }

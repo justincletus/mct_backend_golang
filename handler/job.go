@@ -37,6 +37,7 @@ func CreateJob(c *fiber.Ctx) error {
 
 	job := models.Job{
 		Name:   data["name"],
+		JobId:  data["job_id"],
 		UserId: u_id,
 	}
 
@@ -59,7 +60,8 @@ func CreateJob(c *fiber.Ctx) error {
 	}
 
 	return c.Status(200).JSON(fiber.Map{
-		"id": job.Id,
+		"id":     job.Id,
+		"job_id": job.JobId,
 	})
 
 }

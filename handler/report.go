@@ -378,11 +378,37 @@ func DeleteReport(c *fiber.Ctx) error {
 		})
 	}
 
+	if report.Status == "rejected" || report.Status == "pending" {
+
+		var comment models.Comment
+		database.DB.Where("report_id=?", report.Id).First(&comment)
+
+		err := database.DB.Unscoped().Delete(comment, comment.Id).Error
+		if err != nil {
+			return fiber.NewError(500, "not able delete report from comment table")
+		}
+
+		var client_report models.ClientReport
+		database.DB.Where("report_id=?", report.Id).First(&client_report)
+
+		err = database.DB.Unscoped().Delete(client_report, client_report.Id).Error
+		if err != nil {
+			return fiber.NewError(500, "not able delete report from client table")
+		}
+
+	}
+
+	var order models.Order
+	database.DB.Where("id=?", report.OrderId)
+
 	err := database.DB.Unscoped().Delete(report, id).Error
 	if err != nil {
 		return fiber.NewError(500, "foreign key constraint failed")
 	}
-	//fmt.Println(err)
+	err = database.DB.Unscoped().Delete(order, order.Id).Error
+	if err != nil {
+		return fiber.NewError(500, "not able to delete order from order table")
+	}
 
 	return c.Status(200).JSON(fiber.Map{
 		"data": "report deleted",
@@ -485,6 +511,7 @@ func UpdateReportMgr(c *fiber.Ctx) error {
 		clientReport.SigningDate = signingDate
 		clientReport.ReportId = report.Id
 		report.Status = body["status"].(string)
+		clientReport.ClientSignDate = signingDate
 
 		database.DB.Save(&report)
 
@@ -509,7 +536,7 @@ func UpdateReportMgr(c *fiber.Ctx) error {
 		emailBody := utils.EmailBody{
 			Id:     strconv.FormatInt(int64(report.Id), 10),
 			Status: report.Status,
-			Email:  team.ContractorEmail,
+			Email:  team.Members,
 		}
 
 		if report.Status == "approved" {
@@ -529,18 +556,6 @@ func UpdateReportMgr(c *fiber.Ctx) error {
 			}
 
 		}
-
-		// emailBody := utils.EmailBody{
-		// 	Id:      strconv.FormatInt(int64(report.Id), 10),
-		// 	Status:  report.Status,
-		// 	Message: "This reported is accepted by client",
-		// }
-
-		// fmt.Println(team.ContractorEmail)
-		// err = emailBody.SendEmail(reptUser.Email, "Report Approved", "report_approval.html", team.ContractorEmail)
-		// if err != nil {
-		// 	fmt.Errorf("something went wrong in sending report %s", err.Error())
-		// }
 
 	} else if currentUser.Role == "contractor" {
 
@@ -567,7 +582,7 @@ func UpdateReportMgr(c *fiber.Ctx) error {
 
 	} else if currentUser.Role == "client" {
 		var client_report models.ClientReport
-		fmt.Println(body)
+		//fmt.Println(body)
 
 		database.DB.Where("report_id=?", report.Id).First(&client_report)
 
@@ -593,7 +608,7 @@ func UpdateReportMgr(c *fiber.Ctx) error {
 			remtHost := utils.GetRemoteHostAddress(c)
 			emailBody.Url = remtHost
 
-			err = emailBody.SendEmail(string(team.ContractorEmail), "Report Approved", "report_approval.html", team.Members)
+			err = emailBody.SendEmail(string(team.ContractorEmail), "Report Approved", "report_approval.html", string(team.Members))
 			if err != nil {
 				fmt.Errorf("Error %s\n", err.Error())
 			}

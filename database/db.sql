@@ -216,6 +216,8 @@ alter table `client_reports` drop column `client_insp_sign`;
 
 alter table `client_reports` add column `client_name` varchar(40);
 
-alter table `client_reports` add column `client_sign_date` datetime not null DEFAULT CURRENT_TIMESTAMP; 
+alter table `client_reports` add column `client_sign_date` datetime not null DEFAULT CURRENT_TIMESTAMP;
+
+alter table `client_reports` add column `client_comment` varchar(100);
 
 
