@@ -1,9 +1,9 @@
 package main
 
 import (
-	_ "github.com/justincletus/cms/tz"
+	_ "github.com/justincletus/mct_backend_golang/tz"
 
-	"github.com/justincletus/cms/app"
+	"github.com/justincletus/mct_backend_golang/app"
 )
 
 func main() {

@@ -4,8 +4,8 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/justincletus/cms/database"
-	"github.com/justincletus/cms/models"
+	"github.com/justincletus/mct_backend_golang/database"
+	"github.com/justincletus/mct_backend_golang/models"
 )
 
 func CreateTeam(c *fiber.Ctx) error {

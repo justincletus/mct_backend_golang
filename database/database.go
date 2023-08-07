@@ -3,7 +3,7 @@ package database
 import (
 	"fmt"
 
-	"github.com/justincletus/cms/config"
+	"github.com/justincletus/mct_backend_golang/config"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )

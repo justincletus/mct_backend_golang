@@ -12,10 +12,10 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/gofiber/fiber/v2"
-	"github.com/justincletus/cms/config"
-	"github.com/justincletus/cms/database"
-	"github.com/justincletus/cms/models"
-	"github.com/justincletus/cms/utils"
+	"github.com/justincletus/mct_backend_golang/config"
+	"github.com/justincletus/mct_backend_golang/database"
+	"github.com/justincletus/mct_backend_golang/models"
+	"github.com/justincletus/mct_backend_golang/utils"
 )
 
 type ClientUploader struct {

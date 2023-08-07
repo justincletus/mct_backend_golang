@@ -13,7 +13,7 @@ ENV BUILD_PLATFORMS -osarch=linux/amd64
 
 EXPOSE 8000
 
-RUN go build -o /gps-tracking
+RUN go build -o /mct
 
 # Deploy
 FROM alpine:latest
@@ -22,6 +22,7 @@ WORKDIR /app
 EXPOSE 8000
 
 COPY local.json .
-COPY --from=build /gps-tracking .
+COPY templates .
+COPY --from=build /mct .
 
-ENTRYPOINT ["/app/gps-tracking"]
+ENTRYPOINT ["/app/mct"]

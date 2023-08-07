@@ -5,7 +5,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/gofiber/fiber/v2"
-	"github.com/justincletus/cms/config"
+	"github.com/justincletus/mct_backend_golang/config"
 )
 
 var SECRET = []byte(config.GetAppSecret())

@@ -3,8 +3,8 @@ package router
 import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/logger"
-	"github.com/justincletus/cms/handler"
-	"github.com/justincletus/cms/middelware"
+	"github.com/justincletus/mct_backend_golang/handler"
+	"github.com/justincletus/mct_backend_golang/middelware"
 )
 
 func Setup(app *fiber.App) {

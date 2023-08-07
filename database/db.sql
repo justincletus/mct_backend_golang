@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS cms;
-USE cms;
+CREATE DATABASE IF NOT EXISTS `u647611444_mctgo`;
+USE `u647611444_mctgo`;
 
 create table if not exists `users`(
   `id` int(10) not null auto_increment,
@@ -10,7 +10,8 @@ create table if not exists `users`(
   `mobile` varchar(50),
   `code` varchar(50),
   `email_verified` tinyint(1) default '0',
-  `role` varchar(30),
+  `role` varchar(30) default 'user',
+  `status` TINYINT(1) default '0',
   `created_at` datetime not null default current_timestamp,
   `updated_at` datetime not null default current_timestamp on update current_timestamp,
   `deleted_at` datetime,

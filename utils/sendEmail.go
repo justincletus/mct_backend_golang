@@ -5,9 +5,12 @@ import (
 	"crypto/tls"
 	"fmt"
 	"html/template"
+	"log"
+	"os"
+	"path/filepath"
 	"strconv"
 
-	"github.com/justincletus/cms/config"
+	"github.com/justincletus/mct_backend_golang/config"
 	"github.com/k3a/html2text"
 	gomail "gopkg.in/mail.v2"
 )
@@ -15,7 +18,12 @@ import (
 var temp *template.Template
 
 func init() {
-	temp = template.Must(template.ParseGlob("templates/*.html"))
+	cwd, err := os.Getwd()
+	if err != nil {
+		log.Fatal("error: ", err.Error())
+	}
+	templateDir := filepath.Join(cwd, "templates")
+	temp = template.Must(template.ParseGlob(filepath.Join(templateDir, "*.html")))
 }
 
 type EmailBody struct {
